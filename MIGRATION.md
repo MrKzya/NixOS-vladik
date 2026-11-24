@@ -64,3 +64,11 @@
 Сценарий начинается с обычной установки с официального ISO. Данные дисков, EFI и initrd читаются из локальной копии аппаратного модуля. Инструкция находится в [docs/VMWARE.md](docs/VMWARE.md), проверка перед публикацией — в [SECURITY-AUDIT.md](SECURITY-AUDIT.md).
 
 На этом этапе Nix вычислил системные пакеты и генерации Home Manager для всех трёх режимов VMware. Из самостоятельного снимка проекта вычислены конфигурация QEMU и все шесть выходов `checks`. `flake check --no-build --keep-going` остановил полную проверку ThinkPad, MacBook и VMware на отсутствующих данных корня и EFI. Драйвер, изменение разрешения и графический вход в VMware предстоит проверить в госте.
+
+### Результат чистой установки VMware
+
+Владелец установил NixOS 26.05 с официального ISO в VMware Workstation и применил конфигурацию из GitHub. В госте подтверждена работа Niri, DMS, Ly, Kitty, Fish и оформления.
+
+Vicinae находил приложения, но при запуске Firefox, VS Code и других программ получал `execve: No such file or directory`. Импорт `PATH` в пользовательский менеджер systemd не помог. Сработала явная переменная `PATH` в самой службе. Теперь `modules/desktop/niri.nix` задаёт проверенный порядок каталогов с `%u`, который systemd заменяет именем пользователя. В `PATH` службы добавлен `pactl` из пакета `pulseaudio`. Он работает с уже включённым PipeWire Pulse. [Звуковой бэкенд Vicinae](https://github.com/vicinaehq/vicinae/blob/v0.30.0/src/server/src/services/audio-control/pactl/pactl-audio-control.cpp)
+
+Добавлен фон `Oboi.jpg`. В Default Home Manager задаёт проектный фон через IPC работающего DMS либо через поле `wallpaperPath` в изменяемом `session.json` до запуска DMS. Пользовательские обои и остальные поля сессии сохраняются. Для Gaming установлен пакет фонового изображения `Next`, который Breeze ищет по умолчанию. [IPC DMS](https://duxlabs.dev/docs/dankmaterialshell/keybinds-ipc/), [выбор фонового пакета в Plasma 6.8.3](https://invent.kde.org/plasma/plasma-workspace/-/blob/v6.8.3/wallpapers/defaultwallpaper.cpp)

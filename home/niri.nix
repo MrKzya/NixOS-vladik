@@ -5,6 +5,18 @@ let
   base = ../configs/niri;
   dms = ../configs/dms;
   configHome = config.xdg.configHome;
+  wallpaper = config.xdg.dataFile."wallpapers/Oboi.jpg".source;
+  applyWallpaper = pkgs.writeShellApplication {
+    name = "apply-dms-wallpaper-default";
+    runtimeInputs = [
+      pkgs.coreutils
+      pkgs.jq
+      pkgs.systemd
+      nixosConfig.programs.dux-shell.package
+      nixosConfig.programs.dux-shell.quickshell.package
+    ];
+    text = builtins.readFile ../scripts/apply-dms-wallpaper-default.sh;
+  };
   cursorSize = nixosConfig.mySystem.cursor.size;
   dmsSettings = builtins.fromJSON (builtins.readFile (dms + "/settings.json"));
   dmsSeed = pkgs.writeText "dms-settings.json" (builtins.toJSON (dmsSettings // {
@@ -60,4 +72,8 @@ in
       seed (base + "/dms/${name}") "niri/dms/${name}"
     ) (builtins.attrNames (builtins.readDir (base + "/dms")))
   );
+
+  home.activation.applyDmsWallpaperDefault = lib.hm.dag.entryAfter [ "seedNiriDesktop" ] ''
+    run ${lib.getExe applyWallpaper} ${lib.escapeShellArgs [ config.xdg.stateHome wallpaper ]}
+  '';
 }

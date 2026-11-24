@@ -47,7 +47,16 @@
     after = [ "niri.service" ];
     partOf = [ "niri.service" ];
     unitConfig.ConditionEnvironment = "WAYLAND_DISPLAY";
-    environment.USE_LAYER_SHELL = "1";
+    enableDefaultPath = false;
+    environment = {
+      USE_LAYER_SHELL = "1";
+      PATH = lib.concatStringsSep ":" [
+        "/etc/profiles/per-user/%u/bin"
+        "/run/wrappers/bin"
+        "/run/current-system/sw/bin"
+        (lib.makeBinPath [ pkgs.pulseaudio ]) # pactl talks to PipeWire's PulseAudio server.
+      ];
+    };
     serviceConfig = {
       ExecStart = "${lib.getExe pkgs.vicinae} server";
       Restart = "on-failure";

@@ -14,6 +14,19 @@
   };
   services.pipewire.alsa.support32Bit = true;
 
+  # Breeze looks up its default wallpaper package by the name "Next".
+  home-manager.sharedModules = [
+    ({ config, ... }: {
+      xdg.dataFile = {
+        "wallpapers/Next/metadata.json".text = builtins.toJSON {
+          KPlugin = { Id = "Next"; Name = "Oboi"; };
+        };
+        "wallpapers/Next/contents/images/1920x1200.jpg".source =
+          config.xdg.dataFile."wallpapers/Oboi.jpg".source;
+      };
+    })
+  ];
+
   environment = {
     systemPackages = with pkgs; [ kitty mangohud ];
     etc."xdg/kcminputrc".text = ''

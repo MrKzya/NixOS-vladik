@@ -90,6 +90,8 @@ sudo reboot
 | Gaming | После входа выполните `echo "$XDG_SESSION_TYPE"`. Ожидается `wayland`. Разрешение меняется в настройках дисплея Plasma. Откройте Steam и проверьте конкретную игру, если она важна. Поддержка Vulkan и Proton зависит от виртуального GPU и игры. |
 | Minimal | Система стартует в консоль. Команда `systemctl get-default` должна показать `multi-user.target`. |
 
+Если для Vicinae раньше добавляли временный пользовательский drop-in с `PATH`, после обновления удалите из него эту строку. Посмотреть источник настройки можно через `systemctl --user cat vicinae.service`. Затем выполните `systemctl --user daemon-reload` и `systemctl --user restart vicinae.service`. Проверьте запуск Firefox и VS Code из Alt+Space и журнал `journalctl --user -b -u vicinae.service`.
+
 В закреплённом Nixpkgs VMware-гость включает системный `vmtoolsd` из `open-vm-tools-headless`. Видеоустройство VMware обслуживает модуль ядра `vmwgfx`, а графические профили используют Mesa с драйвером `svga`. Мышь в Wayland обслуживается стандартным вводом ядра и композитора. Если указатель остался захвачен VMware, используйте сочетание освобождения ввода Workstation, обычно Ctrl+Alt. [Модуль NixOS VMware](https://github.com/NixOS/nixpkgs/blob/2786a2a72088ecf32aea5b3ec52099e6a7cff78f/nixos/modules/virtualisation/vmware-guest.nix), [Mesa SVGA3D](https://docs.mesa3d.org/drivers/svga3d.html)
 
 Для Niri откройте `hosts/vmware/niri/display.kdl` и задайте выход и режим из `niri msg outputs`, если автоматический результат не подходит. Затем пересоберите поколение. Автоподстройка под размер окна Workstation зависит от гостевой графики и композитора. Буфер обмена внутри гостя работает средствами сеанса. Для общего буфера Windows ↔ Linux и drag-and-drop Broadcom указывает ограничение в Wayland. Включение Guest Isolation в Workstation само по себе его не снимает. [Ограничения буфера обмена и drag-and-drop](https://knowledge.broadcom.com/external/article/320995)
@@ -108,4 +110,4 @@ sudo reboot
    ```
 
 3. Для проверки EGL из графического сеанса используйте `nix shell nixpkgs#mesa-demos -c eglinfo -B`. Ищите сведения о Wayland и GBM. `llvmpipe` означает программный рендеринг. Запись об SVGA3D подтверждает путь VMware для проверенного контекста. Отдельно проверьте, появляется ли изображение в Gaming. Это помогает отличить общую проблему SVGA от ошибки запуска Niri.
-4. При чёрном экране сохраните журналы, отключите 3D на один диагностический запуск чистой NixOS или Plasma и сравните результат. Параметры хоста Arch для QEMU здесь не используются. Фактическая работа Niri, автоподстройки разрешения и игр под VMware ещё требует проверки в этой ВМ.
+4. При чёрном экране сохраните журналы, отключите 3D на один диагностический запуск чистой NixOS или Plasma и сравните результат. Владелец подтвердил работу Niri + DMS в Default после чистой установки NixOS 26.05 в VMware. Автоподстройка разрешения и игры требуют отдельной проверки.
