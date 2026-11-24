@@ -1,0 +1,2 @@
+// DMS и Vicinae запускаются через systemd вместе с niri.service.
+// Добавляйте сюда автозапуск, нужный на ThinkPad, через spawn-at-startup.
