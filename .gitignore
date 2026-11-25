@@ -26,6 +26,7 @@ OVMF_VARS*.fd
 
 # Локальные настройки и данные приложений
 *.local.nix
+*.local.json
 .env
 .env.*
 .envrc

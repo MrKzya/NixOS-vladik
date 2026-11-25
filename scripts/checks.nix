@@ -77,7 +77,7 @@ in
     let cfg = hosts.${name}.config;
     in checkDesktop cfg
       && cfg.specialisation == { }
-      && ((cfg.users.users.${cfg.mySystem.user}.initialPassword == "vm-only") == (name == "vm"))
+      && ((cfg.users.users.${cfg.mySystem.user}.initialPassword == "vm-only") == (name == "vm" && !(builtins.pathExists ../hosts/vm/installer.local.nix)))
       && (cfg.virtualisation.vmware.guest.enable == (name == "vmware"))
       && (name != "vmware" || !(cfg.virtualisation ? fileSystems))
       && (builtins.elem "apple-bce" cfg.boot.initrd.kernelModules == (name == "macbook"))
@@ -117,6 +117,13 @@ in
       };
     };
   }]);
+
+  installer = pkgs.runCommand "installer-fixtures" { nativeBuildInputs = [ pkgs.bash pkgs.jq pkgs.shellcheck ]; } ''
+    cd ${../.}
+    shellcheck -x install.sh installer/tests/run.sh
+    bash installer/tests/run.sh
+    touch "$out"
+  '';
 
   shell-config = pkgs.runCommand "shell-config" { nativeBuildInputs = [ pkgs.fish ]; } ''
     fish --no-config --no-execute ${../configs/fish/config.fish}

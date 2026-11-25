@@ -103,8 +103,47 @@
         "minegrub-world": "minegrub-world",
         "nixos-hardware": "nixos-hardware",
         "nixpkgs": "nixpkgs",
+        "t2-kernel-hardware": "t2-kernel-hardware",
+        "t2-kernel-nixpkgs": "t2-kernel-nixpkgs",
         "t2fanrd": "t2fanrd",
         "zen": "zen"
+      }
+    },
+    "t2-kernel-hardware": {
+      "inputs": {
+        "nixpkgs": [
+          "t2-kernel-nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1782166108,
+        "narHash": "sha256-/EtnQBcKbsaCAGQ5VRcplrHRkR4ryqyLMpBfkVuG9Xw=",
+        "owner": "NixOS",
+        "repo": "nixos-hardware",
+        "rev": "875776f0252fcb8618bb948640a0d1f7a5b362be",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "repo": "nixos-hardware",
+        "rev": "875776f0252fcb8618bb948640a0d1f7a5b362be",
+        "type": "github"
+      }
+    },
+    "t2-kernel-nixpkgs": {
+      "locked": {
+        "lastModified": 1781577229,
+        "narHash": "sha256-lrp67w8AulE9Ks53n27I45ADSzbOCn4H+CNW1Ck8B+8=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "567a49d1913ce81ac6e9582e3553dd90a955875f",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "567a49d1913ce81ac6e9582e3553dd90a955875f",
+        "type": "github"
       }
     },
     "t2fanrd": {

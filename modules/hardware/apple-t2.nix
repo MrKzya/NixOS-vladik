@@ -2,6 +2,7 @@
 
 let
   cfg = config.mySystem.macbook;
+  cache = import ./t2-cache.nix;
   grub = config.boot.loader.grub;
   efi = config.boot.loader.efi;
   esp = config.fileSystems."/boot" or { };
@@ -11,6 +12,7 @@ let
 in
 {
   imports = [
+    ./t2-kernel.nix
     inputs.nixos-hardware.nixosModules.apple-t2
     inputs.t2fanrd.nixosModules.t2fanrd
   ];
@@ -31,6 +33,11 @@ in
   };
 
   config = {
+    nix.settings = {
+      extra-substituters = [ cache.url ];
+      extra-trusted-public-keys = [ cache.key ];
+    };
+
     networking.networkmanager.wifi.backend = lib.mkDefault "iwd";
 
     # Require an explicit confirmation before permitting the removable fallback install.
