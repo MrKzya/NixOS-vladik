@@ -1,6 +1,6 @@
 # Компоненты NixOS-vladik
 
-Открой `hosts/<хост>/configuration.nix`. В каждом из четырёх файлов перечислен весь общий набор. Значения ниже совпадают с исходной конфигурацией V2 для всех хостов, кроме отмеченных аппаратных опций. Флаги независимы от состава других хостов.
+Общие значения заданы в `hosts/<профиль>/configuration.nix`. Установка V3 записывает выбор в `settings.local.json`. Изменение одного профиля не влияет на остальные.
 
 ## Графика
 
@@ -39,7 +39,7 @@ DMS и Vicinae подключаются только при включённом
 
 ## Игры и система
 
-Все `mySystem.gaming.<имя>.enable` выключены по умолчанию:
+Все `mySystem.gaming.<имя>.enable` выключены по умолчанию.
 
 | Имя | Действие |
 | --- | --- |
@@ -48,7 +48,7 @@ DMS и Vicinae подключаются только при включённом
 | `protonupQt`, `prismLauncher` | `protonup-qt`, `prismlauncher` |
 | `gamemode`, `mangohud` | `programs.gamemode`, пакет `mangohud` |
 
-PortProton отсутствует в закреплённом Nixpkgs. Для ручной установки включи `mySystem.system.flatpak.enable`, пересобери хост и выполни:
+PortProton устанавливается из Flathub после включения `mySystem.system.flatpak.enable` и пересборки.
 
 ```bash
 flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
@@ -65,8 +65,8 @@ Flatpak-приложение, его Wine Runtime и обновления упр
 | `appimage` | false | Поддержка AppImage и binfmt |
 | `nixLd` | false | Nix-ld для совместимых сторонних бинарников |
 
-Fish, NetworkManager, Git, Nano и основные дисковые/сетевые утилиты входят в базу. `mySystem.user` по умолчанию `"vladik"`. `mySystem.bluetooth.enable` включён на физических хостах, выключен в гостях. `mySystem.cursor.size` равен 24. `mySystem.grub.theme` принимает `"minegrub"`, `"world-selection"` или `"none"`. Специальные опции T2 перечислены в [MACBOOK-T2.md](MACBOOK-T2.md), параметры GC — в [README.md](../README.md#nix-store-и-откат).
+Fish, NetworkManager, Git, Nano и основные дисковые/сетевые утилиты входят в базу. `mySystem.user` по умолчанию `"vladik"`. `mySystem.bluetooth.enable` включён на физических хостах, выключен в гостях. `mySystem.cursor.size` равен 24. `mySystem.grub.theme` принимает `"minegrub"`, `"world-selection"` или `"none"`. Специальные опции T2 перечислены в [MACBOOK-T2.md](MACBOOK-T2.md), параметры GC — в [CONFIGURATION.md](CONFIGURATION.md#nix-store).
 
 ## Примеры
 
-В существующем блоке выбранного хоста для двух графических сеансов поменяй `desktop.plasma.enable = true;`. Для Steam в Niri поменяй `gaming.steam.enable = true;`. Plasma и Steam можно включать независимо. Для TTY установи `desktop.niri.enable` и `desktop.plasma.enable` в `false`, оставь `desktop.defaultSession = null`. Для компактной TTY-конфигурации также выключи ненужные графические приложения и игровые пакеты. При переходе с V1 прежние `development`, `binaryCompatibility` и `networkApps` из локальных настроек замени соответствующими новыми флагами.
+Для двух графических сеансов достаточно `desktop.plasma.enable = true` при включённом Niri. Steam подключается через `gaming.steam.enable = true`. Для TTY оба графических флага выключены, а `desktop.defaultSession = null`. Опциональные приложения можно выключать независимо. В `settings.local.json` эти значения представлены полями `desktop.<среда>.enable` и `components.<группа>.<имя>`.

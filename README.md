@@ -1,59 +1,37 @@
 # NixOS-vladik
 
-Декларативное окружение для ThinkPad, Intel MacBook T2, VMware Workstation и QEMU/KVM. У каждого устройства одна системная конфигурация в ветке `main`. По умолчанию включена связка Niri + DankMaterialShell + Vicinae. Plasma, Zen и игровые приложения включаются по необходимости.
+Декларативная конфигурация NixOS и терминальный установщик для x86_64 UEFI. Основной сеанс — Niri, DankMaterialShell, Vicinae и Ly. Пользовательская конфигурация управляется Home Manager. KDE Plasma, Zen и игровые приложения подключаются отдельными флагами.
 
-## Куда смотреть
+## Платформы
 
-| Файл или каталог | Что менять |
+| Профиль | Платформа |
 | --- | --- |
-| `hosts/<хост>/configuration.nix` | Все переключатели приложений, графики и игровых компонентов. Здесь же Bluetooth, курсор и тема GRUB |
-| `hosts/<хост>/hardware-configuration.nix` | Подключение аппаратной конфигурации. Для MacBook, ThinkPad и VMware реальные параметры хранятся в игнорируемом `hardware-configuration.local.nix` |
-| `hosts/<хост>/niri/` | Дисплеи, масштаб и пользовательский автозапуск |
-| `modules/system/workstation.nix` | Объявления переключателей и связь с пакетами. При добавлении компонента добавь его и в список каждого хоста |
-| `modules/desktop/`, `home/` | Графические сеансы, службы и Home Manager |
-| `configs/`, `assets/wallpapers/` | KDL, настройки DMS, Kitty, Fish, Ly и исходные обои |
-| `flake.nix`, `flake.lock` | Список хостов, выход QEMU и закреплённые зависимости |
-| `scripts/checks.nix` | Матрица компонентов и проверки конфигурации Niri |
+| `thinkpad` | Lenovo ThinkPad |
+| `macbook` | Intel MacBook с Apple T2 и отдельным Linux ESP |
+| `vmware` | VMware Workstation |
+| `vm` | QEMU/KVM |
 
-Все опции, значения по умолчанию и примеры описаны в [COMPONENTS.md](docs/COMPONENTS.md).
+## Быстрая установка
 
-## Установка и пересборка
-
-- [MacBook T2 с macOS и отдельным Linux ESP](docs/MACBOOK-T2.md)
-- [Чистая установка и переход существующей VMware на V2](docs/VMWARE.md)
-
-После подготовки аппаратных файлов из корня репозитория собери свой хост. Пример для уже установленной VMware:
+Требуются NixOS Minimal Live ISO, сеть, подготовленный GPT-раздел Btrfs и отдельный пустой ESP FAT32. Минимум свободного места — 15 ГиБ на корне и 256 МиБ на ESP. MacBook требует [T2 Live ISO](docs/MACBOOK-T2.md).
 
 ```bash
-nixos-rebuild build --flake "path:$PWD#vmware"
-sudo nixos-rebuild boot --flake "path:$PWD#vmware"
+git clone --branch installer https://github.com/MrKzya/NixOS-vladik.git
+cd NixOS-vladik
+sudo bash install.sh --dry-run
+sudo bash install.sh
 ```
 
-`boot` готовит поколение для следующей загрузки. Для применения в текущем сеансе можно использовать `switch` вместо `boot`. Форма `path:` включает локальные аппаратные файлы, которые Git игнорирует. Держи приватные ключи и пароли вне дерева исходников. В GRUB остаются Minegrub и предыдущие поколения. При включённых Niri и Plasma выбирай сеанс в Ly на tty2. При выходе из одного сеанса можно войти в другой. С выключенными Niri и Plasma доступна текстовая консоль.
+`--dry-run` показывает план без монтирования, записи на целевые разделы и изменений DNS. В обычном режиме установщик монтирует разделы, формирует аппаратный модуль, проверяет зависимости, устанавливает GRUB и настраивает пользователя. Собственная разметка и форматирование остаются за пределами установщика. [Установка](docs/INSTALLATION.md)
 
-Для тестовой QEMU/KVM используй `nix build "path:$PWD#vm"` и `./result/bin/run-vladik-vm-vm`. Тестовые данные входа `vladik` / `vm-only` действуют только у этого гостя. Для Niri владелец использовал VirGL и nixGLIntel на стороне Arch. Эти настройки относятся к запуску QEMU на его компьютере.
+## Архитектура
 
-## Оформление
+`flake.nix` связывает аппаратные профили из `hosts/` с общими модулями из `modules/`. `home/` и `configs/` содержат Home Manager и оформление. `installer/` преобразует параметры интерфейса в локальный модуль Flake. Установленная конфигурация хранится в `/etc/nixos/NixOS-vladik`.
 
-Исходные бинды находятся в `configs/niri/cfg/keybinds.kdl`. При сборке Home Manager учитывает переключатели приложений и создаёт используемую копию KDL. Для замены фона подмени `assets/wallpapers/Oboi.jpg` другим JPEG и пересобери систему. В DMS обновляется только фон проекта или пустой выбор. В Plasma изображение служит фоном Breeze по умолчанию. Чтобы вернуть проектный фон из запущенного DMS в режиме одного общего фона, выполни в Bash:
-
-```bash
-dms ipc call wallpaper set "$(readlink -f "${XDG_DATA_HOME:-$HOME/.local/share}/wallpapers/Oboi.jpg")"
-```
-
-Параметры DMS, данные сессий и личные обои остаются в домашнем каталоге. Меняй разрешение и масштаб Niri в `hosts/<хост>/niri/display.kdl`. Имена выходов покажет `niri msg outputs`.
-
-## Nix Store и откат
-
-Рабочие настройки по умолчанию — еженедельный GC, удаление старых поколений по политике `--delete-older-than 14d` и `auto-optimise-store = true` для объединения одинаковых файлов. Эти параметры можно переопределять в конфиге хоста. Перед важным тестом можно временно выключить `nix.gc.automatic` или удержать рабочее поколение отдельным GC root, как в инструкции VMware.
-
-Смена флага исключает пакет из новой конфигурации. Старые поколения и другие GC roots продолжают удерживать его и зависимости. Обычный `sudo nix store gc` убирает недостижимые объекты. Выбранные для удаления поколения теряют возможность отката после GC; сначала проверь текущий запуск и сохранённое рабочее поколение. Порядок освобождения места после старых Gaming-профилей и сравнение размеров приведены в [VMWARE.md](docs/VMWARE.md#переход-рабочей-vmware-на-v2).
-
-```bash
-nix path-info -Sh /run/current-system
-nix path-info -Sh "$(nix build --no-link --print-out-paths nixpkgs#firefox)"
-```
-
-Первое число с `-S` охватывает транзитивные зависимости и может отличаться от физического расхода диска из-за общих файлов и дедупликации. Второй пример при необходимости скачает или соберёт пакет. Игры Steam, пользовательские кеши и Flatpak хранятся отдельно и обслуживаются собственными средствами.
-
-Состояние переноса описано в [MIGRATION.md](MIGRATION.md), оставшиеся проверки — в [TODO.md](TODO.md), публикация — в [SECURITY-AUDIT.md](SECURITY-AUDIT.md).
+- [Конфигурация, пересборка и откат](docs/CONFIGURATION.md)
+- [Переключатели компонентов](docs/COMPONENTS.md)
+- [MacBook Air с Apple T2 и macOS](docs/MACBOOK-T2.md)
+- [Готовое ядро и бинарный кеш](docs/BINARY-CACHE.md)
+- [VMware и воспроизводимая проверка](docs/VMWARE.md)
+- [Диагностика](docs/TROUBLESHOOTING.md)
+- [История изменений](CHANGELOG.md)
