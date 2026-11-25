@@ -1,17 +1,17 @@
 # NixOS-vladik в VMware Workstation на Windows
 
-Сначала установите чистую NixOS с официального ISO. Затем подключите к репозиторию аппаратную конфигурацию установленного гостя и примените профиль `vmware`. В итоге Default, Gaming и Minimal будут загружаться из одного GRUB и использовать один диск и домашний каталог. Инструкция рассчитана на Windows на x86-64 и виртуальную машину Workstation.
+Для новой ВМ сначала установите чистую NixOS с официального ISO. Затем подключите аппаратную конфигурацию гостя и примените `#vmware`. Для уже установленной NixOS-vladik используйте [переход на V2](#переход-рабочей-vmware-на-v2). Инструкция рассчитана на Windows x86-64 и VMware Workstation.
 
 ## 1. Создайте виртуальную машину
 
 1. На странице NixOS скачайте официальный **Graphical ISO, 64-bit Intel/AMD**. Для чистой установки подходит стабильный образ NixOS 26.05, соответствующий `system.stateVersion` проекта. GNOME или KDE можно выбрать в загрузочном меню ISO для live-среды. Рабочий стол установленной системы выбирается отдельно в установщике. [Скачать NixOS](https://nixos.org/download/)
 2. В Workstation выберите **File → New Virtual Machine**. Создайте одну машину типа Linux x86-64. Если отдельного пункта NixOS нет, выберите **Other Linux 64-bit**. При предложении Easy Install создайте машину с вариантом **I will install the operating system later**, затем подключите скачанный ISO через **CD/DVD → Use ISO image file**.
-3. Выделите **4 vCPU, 8 ГиБ RAM и 80 ГиБ** на новом расширяемом виртуальном диске. Это ориентир для сборки трёх профилей. Если планируете устанавливать игры, увеличьте диск с учётом их размера. Для первого теста достаточно NAT.
+3. Выделите **4 vCPU, 8 ГиБ RAM и 80 ГиБ** на новом расширяемом виртуальном диске. Если планируете устанавливать игры, увеличьте диск с учётом их размера. Для первого теста достаточно NAT.
 4. В настройках выключенной ВМ выберите **UEFI**. Обычно это **VM → Settings → Options → Advanced → Firmware type**. Для этой схемы установки оставьте Secure Boot выключенным. В **Hardware → Display** включите **Accelerate 3D graphics**. Проверьте драйвер видеокарты на Windows, если Workstation сообщает, что 3D недоступно. Linux-гость будет использовать виртуальный SVGA-адаптер, который предоставляет Workstation. [Настройка 3D в Workstation](https://knowledge.broadcom.com/external/article/329348), [драйвер Mesa SVGA3D](https://docs.mesa3d.org/drivers/svga3d.html)
 
 ## 2. Установите чистую NixOS
 
-Загрузитесь с ISO и запустите графический установщик. Выберите язык и раскладку. В выборе рабочего стола подойдёт **No desktop**, тогда после установки вы получите TTY. Если хотите сначала проверить графику на стандартном окружении, выберите Plasma. Начальный рабочий стол сохранится в исходном поколении NixOS для отката. [Установка NixOS](https://nixos.org/manual/nixos/stable/#sec-installation)
+Загрузитесь с ISO и запустите графический установщик. Выберите язык и раскладку. В выборе рабочего стола подойдёт **No desktop**. Можно также использовать **официальный Minimal ISO** и пройти консольную установку из руководства NixOS. Именно этот вариант владелец проверил в VMware. [Установка NixOS](https://nixos.org/manual/nixos/stable/#sec-installation)
 
 В разделе разметки выберите новый виртуальный диск, сверив размер. При ручной разметке удобно выделить под FAT32 EFI System Partition около 1 ГиБ или больше, оставив место для нескольких поколений. При автоматической разметке проверьте объём EFI после установки. Создайте пользователя **vladik** с собственным паролем, предоставьте ему права администратора и завершите установку. После перезагрузки отключите ISO и войдите под этим пользователем. Если выбрали No desktop, вход будет через текстовую консоль.
 
@@ -28,11 +28,11 @@ lsblk -f
 
 ## 3. Включите Flakes и клонируйте репозиторий
 
-В примере замените `ВЛАДЕЛЕЦ` на имя владельца публичного репозитория на GitHub. Выполняйте команды от пользователя гостя.
+Выполняйте команды от пользователя гостя.
 
 ```bash
 export NIX_CONFIG='experimental-features = nix-command flakes'
-nix-shell -p git --run 'git clone https://github.com/ВЛАДЕЛЕЦ/NixOS-vladik.git'
+nix-shell -p git --run 'git clone https://github.com/MrKzya/NixOS-vladik.git'
 cd NixOS-vladik
 ```
 
@@ -77,18 +77,18 @@ sudo reboot
 
 `boot` готовит следующее включение и сохраняет текущий сеанс до перезагрузки. Флаг для установки загрузчика нужен при первоначальном переходе на GRUB с загрузчика чистой NixOS. Для следующих обновлений этой ВМ достаточно той же команды без `--install-bootloader`.
 
-В GRUB выберите **Default** для Niri, **Gaming** для Plasma Wayland или **Minimal** для входа в TTY. В Default и Gaming появится Ly на tty2. Войдите обычным паролем гостя.
+GRUB показывает поколение системы. По умолчанию Ly на tty2 предлагает Niri. Чтобы добавить Plasma, включите `mySystem.desktop.plasma.enable` в `hosts/vmware/configuration.nix` и примените конфигурацию. После выхода из сеанса можно выбрать другой рабочий стол в Ly. При выключенных Niri и Plasma система загружается в TTY.
 
-Если новый режим не работает, загрузите **Minimal** или предыдущее поколение в подменю GRUB. Если GRUB вообще не появляется, используйте меню прошивки ВМ **Power On to Firmware** и выберите исходную запись UEFI, если она доступна, либо восстановите снимок. Из работающего гостя можно выполнить `sudo nixos-rebuild boot --rollback`, если нужен предыдущий системный профиль по умолчанию. [Откаты NixOS](https://nixos.org/manual/nixos/stable/#sec-rollback)
+Если новое поколение не работает, загрузите прежнее из подменю GRUB. Если GRUB вообще не появляется, используйте меню прошивки ВМ **Power On to Firmware** и выберите исходную запись UEFI, если она доступна, либо восстановите снимок. Из работающего гостя можно выполнить `sudo nixos-rebuild boot --rollback`. [Откаты NixOS](https://nixos.org/manual/nixos/stable/#sec-rollback)
 
 ## 6. Проверьте графику и VMware Tools
 
 | Проверка | Что посмотреть |
 | --- | --- |
 | Гостевая служба | `systemd-detect-virt` должен показать `vmware`. В любом профиле выполните `systemctl status vmware.service` и `vmtoolsd --version`. |
-| Default | После входа из терминала выполните `systemctl --user status niri.service dms.service vicinae.service` и `niri msg outputs`. Проверьте панель DMS, Alt+Space и меню блокировки. |
-| Gaming | После входа выполните `echo "$XDG_SESSION_TYPE"`. Ожидается `wayland`. Разрешение меняется в настройках дисплея Plasma. Откройте Steam и проверьте конкретную игру, если она важна. Поддержка Vulkan и Proton зависит от виртуального GPU и игры. |
-| Minimal | Система стартует в консоль. Команда `systemctl get-default` должна показать `multi-user.target`. |
+| Niri | После входа выполните `systemctl --user status niri.service dms.service vicinae.service` и `niri msg outputs`. Проверьте панель DMS, Alt+Space и меню блокировки. |
+| Plasma, если включена | После входа `echo "$XDG_SESSION_TYPE"` покажет `wayland`. Проверьте разрешение в настройках дисплея. Доступность Vulkan в VMware зависит от виртуального GPU. |
+| TTY, если выключены оба окружения | `systemctl get-default` должен показать `multi-user.target`. |
 
 Если для Vicinae раньше добавляли временный пользовательский drop-in с `PATH`, после обновления удалите из него эту строку. Посмотреть источник настройки можно через `systemctl --user cat vicinae.service`. Затем выполните `systemctl --user daemon-reload` и `systemctl --user restart vicinae.service`. Проверьте запуск Firefox и VS Code из Alt+Space и журнал `journalctl --user -b -u vicinae.service`.
 
@@ -98,7 +98,7 @@ sudo reboot
 
 ## 7. Если Niri не запускается
 
-1. Переключитесь на tty1 или загрузите Minimal. На выключенной ВМ проверьте включённое 3D, поддержку у драйвера Windows и наличие виртуального дисплея.
+1. Переключитесь на tty1 или загрузите рабочее поколение. На выключенной ВМ проверьте включённое 3D, поддержку у драйвера Windows и наличие виртуального дисплея.
 2. После попытки входа проверьте модули, устройства и журналы внутри гостя:
 
    ```bash
@@ -109,5 +109,38 @@ sudo reboot
    journalctl --user -b -u niri.service -u dms.service
    ```
 
-3. Для проверки EGL из графического сеанса используйте `nix shell nixpkgs#mesa-demos -c eglinfo -B`. Ищите сведения о Wayland и GBM. `llvmpipe` означает программный рендеринг. Запись об SVGA3D подтверждает путь VMware для проверенного контекста. Отдельно проверьте, появляется ли изображение в Gaming. Это помогает отличить общую проблему SVGA от ошибки запуска Niri.
-4. При чёрном экране сохраните журналы, отключите 3D на один диагностический запуск чистой NixOS или Plasma и сравните результат. Владелец подтвердил работу Niri + DMS в Default после чистой установки NixOS 26.05 в VMware. Автоподстройка разрешения и игры требуют отдельной проверки.
+3. Для проверки EGL из графического сеанса используйте `nix shell nixpkgs#mesa-demos -c eglinfo -B`. Ищите сведения о Wayland и GBM. `llvmpipe` означает программный рендеринг. Запись об SVGA3D подтверждает путь VMware для проверенного контекста. Если включена Plasma, отдельно проверьте её сеанс.
+4. При чёрном экране сохраните журналы, отключите 3D на один диагностический запуск чистой NixOS или Plasma и сравните результат. Владелец подтвердил работу Niri + DMS после чистой установки NixOS 26.05 в VMware. Автоподстройка разрешения и игры требуют отдельной проверки.
+
+## Переход рабочей VMware на V2
+
+1. Сохраните снимок выключенной ВМ. В существующей системе проверьте `hosts/vmware/hardware-configuration.local.nix` и сохраните его резервную копию вне репозитория. Пользователь, пароль, домашний каталог и DMS остаются в установленной системе. Чтобы в период проверки не сработало автоматическое удаление поколений, временно задайте в локальном модуле `nix.gc.automatic = false;`.
+2. До перехода запишите путь активной системы и размер её замыкания. Если сейчас загружена специализация, отдельно измерьте родительское поколение из `/nix/var/nix/profiles/system` — именно оно удерживает все специализации V1.
+
+   ```bash
+   old=$(readlink -f /nix/var/nix/profiles/system)
+   nix path-info --closure-size --human-readable "$old"
+   sudo nix-store --add-root /nix/var/nix/gcroots/nixos-vladik-pre-v2 --realise "$old"
+   git pull --ff-only origin main
+   ```
+
+3. Просмотрите `hosts/vmware/configuration.nix`. Если старый локальный модуль задавал `mySystem.development`, `binaryCompatibility` или `networkApps`, перенесите их в актуальные флаги из [COMPONENTS.md](COMPONENTS.md). Оставьте прежние имя пользователя, точку ESP, корень и `system.stateVersion`.
+
+   ```bash
+   nixos-rebuild build --flake "path:$PWD#vmware"
+   nix path-info --closure-size --human-readable ./result
+   sudo nixos-rebuild boot --flake "path:$PWD#vmware"
+   sudo reboot
+   ```
+
+4. После загрузки проверьте Ly, Niri, DMS и Vicinae, пароль и содержимое домашнего каталога. Старое поколение можно выбрать в GRUB. Флаг `--install-bootloader` при обычном переходе с уже работающего GRUB не нужен. Сравнение двух `path-info` показывает размер двух реализованных замыканий; оно не измеряет освобождение места на диске. Физическое использование можно сравнить `df -h /nix` до и после GC.
+5. Только после проверки выполните `sudo nix-env --profile /nix/var/nix/profiles/system --list-generations`. При необходимости удалите **выбранные старые** поколения через `sudo nix-env --profile /nix/var/nix/profiles/system --delete-generations НОМЕР`. Номера активного и сохранённых рабочих поколений оставьте. Обновите меню GRUB через `nixos-rebuild boot`. Когда сохранённый V1 больше не нужен, удалите созданную на шаге 2 ссылку `/nix/var/nix/gcroots/nixos-vladik-pre-v2`, затем выполните `sudo nix store gc`. Если старая сборка остаётся в Store, проверьте другие GC roots, в том числе ссылки `result*`. Пользовательские библиотеки игр, кэш и Flatpak очищаются отдельно. После проверки можно вернуть еженедельную очистку, удалив локальное переопределение.
+
+Для локальных проверок из корня клона:
+
+```bash
+nix build --no-link "path:$PWD#checks.x86_64-linux."{components,desktop-matrix,niri-vmware,niri-optional-bindings,shell-config}
+nixos-rebuild build --flake "path:$PWD#vmware"
+```
+
+`nix flake check --no-build --keep-going "path:$PWD"` также вычисляет остальные хосты. В чистом клоне VMware, ThinkPad и MacBook ожидают локальных данных дисков. В установленной VMware проверяй полный конфиг именно своего гостя.

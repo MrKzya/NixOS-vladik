@@ -34,34 +34,19 @@
     let
       system = "x86_64-linux";
 
-      mkHost = hostDir:
-        let
-          common = [
-            home-manager.nixosModules.home-manager
-            ./modules/system/base.nix
-            ./modules/system/workstation.nix
-            ./modules/boot/grub.nix
-            (hostDir + "/configuration.nix")
-          ];
-        in
-        nixpkgs.lib.nixosSystem {
-          specialArgs = { inherit inputs hostDir; };
-          modules = common ++ [
-            ./profiles/default.nix
-            {
-              specialisation = {
-                Gaming = {
-                  inheritParentConfig = false;
-                  configuration.imports = common ++ [ ./profiles/gaming.nix ];
-                };
-                Minimal = {
-                  inheritParentConfig = false;
-                  configuration.imports = common ++ [ ./profiles/minimal.nix ];
-                };
-              };
-            }
-          ];
-        };
+      mkHost = hostDir: nixpkgs.lib.nixosSystem {
+        specialArgs = { inherit inputs hostDir; };
+        modules = [
+          home-manager.nixosModules.home-manager
+          ./modules/system/base.nix
+          ./modules/system/workstation.nix
+          ./modules/boot/grub.nix
+          ./modules/desktop/shared.nix
+          ./modules/desktop/niri.nix
+          ./modules/desktop/plasma.nix
+          (hostDir + "/configuration.nix")
+        ];
+      };
 
       hosts = {
         thinkpad = mkHost ./hosts/thinkpad;

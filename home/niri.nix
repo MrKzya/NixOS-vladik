@@ -2,6 +2,9 @@
 { config, lib, nixosConfig, pkgs, ... }:
 
 let
+  cfg = nixosConfig.mySystem;
+  enableDms = cfg.desktop.dms.enable;
+  enableVicinae = cfg.desktop.vicinae.enable;
   base = ../configs/niri;
   dms = ../configs/dms;
   configHome = config.xdg.configHome;
@@ -35,7 +38,7 @@ in
   };
 
   xdg.configFile = (lib.genAttrs
-    (map (name: "niri/cfg/${name}.kdl") [ "animation" "input" "keybinds" "kanagawa" "layout" "misc" "rules" ])
+    (map (name: "niri/cfg/${name}.kdl") [ "animation" "input" "kanagawa" "layout" "misc" "rules" ])
     (name: { source = base + (lib.removePrefix "niri" name); })
   ) // {
     "niri/config.kdl".source = base + "/config.kdl";
@@ -47,16 +50,12 @@ in
           xcursor-size ${toString cursorSize}
       }
     '';
-    "autostart/polkit-gnome-authentication-agent-1.desktop".text = ''
-      [Desktop Entry]
-      Type=Application
-      Hidden=true
-    '';
-    "dms/themes/kanagawa/theme.json".source = dms + "/themes/kanagawa/theme.json";
+    "niri/cfg/keybinds.kdl".text = import ./niri-keybinds.nix { inherit cfg lib; };
+    "dms/themes/kanagawa/theme.json" = lib.mkIf enableDms { source = dms + "/themes/kanagawa/theme.json"; };
   };
 
-  # Mutable files survive the activation of Gaming and Minimal.
-  home.activation.seedNiriDesktop = lib.hm.dag.entryAfter [ "linkGeneration" ] (
+  # The application owns its mutable files, including after a component is disabled.
+  home.activation.seedDms = lib.mkIf enableDms (lib.hm.dag.entryAfter [ "linkGeneration" ] (
     ''
       if [[ ! -e ${lib.escapeShellArg "${configHome}/DankMaterialShell/settings.json"} ]]; then
         ${seed dmsSeed "dms/settings.json"}
@@ -67,13 +66,16 @@ in
         ${seed (dms + "/plugin_settings.json") "dms/plugin_settings.json"}
       fi
     ''
-    + seed ../configs/vicinae/settings.json "vicinae/settings.json"
     + lib.concatMapStrings (name:
       seed (base + "/dms/${name}") "niri/dms/${name}"
     ) (builtins.attrNames (builtins.readDir (base + "/dms")))
+  ));
+
+  home.activation.seedVicinae = lib.mkIf enableVicinae (
+    lib.hm.dag.entryAfter [ "linkGeneration" ] (seed ../configs/vicinae/settings.json "vicinae/settings.json")
   );
 
-  home.activation.applyDmsWallpaperDefault = lib.hm.dag.entryAfter [ "seedNiriDesktop" ] ''
+  home.activation.applyDmsWallpaperDefault = lib.mkIf enableDms (lib.hm.dag.entryAfter [ "seedDms" ] ''
     run ${lib.getExe applyWallpaper} ${lib.escapeShellArgs [ config.xdg.stateHome wallpaper ]}
-  '';
+  '');
 }

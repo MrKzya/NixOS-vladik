@@ -6,9 +6,13 @@ set -gx EDITOR nano
 #function fish_greeting
 #    # smth smth
 #end
-starship init fish | source
+if type -q starship
+    starship init fish | source
+end
 set -g fish_greeting ""
-fastfetch
+if type -q fastfetch
+    fastfetch
+end
 function fish_user_key_bindings 
 	bind \cl 'clear; commandline -f repaint'
 end

@@ -24,11 +24,14 @@ in
 
   config = {
     system.stateVersion = "26.05";
-    nix.settings.experimental-features = [ "nix-command" "flakes" ];
+    nix.settings = {
+      experimental-features = [ "nix-command" "flakes" ];
+      auto-optimise-store = lib.mkDefault true;
+    };
     nix.gc = {
-      automatic = lib.mkDefault false;
+      automatic = lib.mkDefault true;
       dates = lib.mkDefault "weekly";
-      options = lib.mkDefault "--delete-older-than 30d";
+      options = lib.mkDefault "--delete-older-than 14d";
     };
 
     nixpkgs.config.allowUnfreePredicate = pkg:
@@ -60,7 +63,6 @@ in
       iproute2
       nano
       ntfs3g
-      pwgen
       ripgrep
       tree
     ];

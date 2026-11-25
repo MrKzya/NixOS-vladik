@@ -26,7 +26,7 @@ in
         enable = theme == "minegrub";
         # Retain the artwork shipped with the theme.
         splash = "";
-        boot-options-count = 4;
+        boot-options-count = 2; # Current generation and the previous-generations submenu.
       };
       minegrub-world-sel.enable = theme == "world-selection";
     };

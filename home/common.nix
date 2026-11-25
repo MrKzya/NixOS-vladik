@@ -4,8 +4,6 @@
   home.stateVersion = "26.05";
   xdg.enable = true;
 
-  home.packages = with pkgs; [ starship fastfetch ];
-
   xdg.configFile."fish/config.fish".source = ../configs/fish/config.fish;
 
   # fishd owns this file and can change it at runtime.

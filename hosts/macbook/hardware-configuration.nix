@@ -1,6 +1,8 @@
-{ ... }:
+{ lib, ... }:
 
 {
-  # Replace with output from the Intel MacBook T2, using a T2 live system.
-  # Keep the real root, its dedicated Linux EFI partition and initrd settings.
+  # Generate on the Intel MacBook T2. Populate the ignored .local.nix file
+  # with the real root and dedicated Linux ESP mounted at /boot.
+  imports = lib.optional (builtins.pathExists ./hardware-configuration.local.nix)
+    ./hardware-configuration.local.nix;
 }

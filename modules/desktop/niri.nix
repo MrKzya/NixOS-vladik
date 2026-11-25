@@ -1,51 +1,70 @@
-{ lib, pkgs, hostDir, ... }:
+{ config, lib, pkgs, hostDir, ... }:
 
-{
+let
+  cfg = config.mySystem;
+  niri = cfg.desktop.niri.enable;
+  dms = cfg.desktop.dms.enable;
+  vicinae = cfg.desktop.vicinae.enable;
+  niriUnit = [ "niri.service" ];
+in
+
+lib.mkIf niri {
   programs = {
-    niri.enable = true;
-    dux-shell = {
+    niri = {
+      enable = true;
+      useNautilus = cfg.apps.nautilus.enable;
+    };
+    dux-shell = lib.mkIf dms {
       enable = true;
       systemd.target = "niri.service";
       plugins.dankKbdLayout.src = ../../configs/dms/dankKbdLayout;
     };
-    dux-search = {
+    dux-search = lib.mkIf dms {
       enable = true;
       systemd.target = "niri.service";
     };
   };
 
-  security.pam.services.dankshell = { };
+  security.pam.services.dankshell = lib.mkIf dms { };
   programs.dconf.enable = true;
   services = {
     upower.enable = true;
-    gvfs.enable = true;
   };
   environment.systemPackages = with pkgs; [
-    dux-gop
     glib.bin
     xrdb
     libnotify
-    polkit_gnome
-    vicinae
     xwayland-satellite
-  ];
+    qt6.qtwayland
+  ] ++ lib.optionals dms [ pkgs.dux-gop ]
+    ++ lib.optionals (!dms) [ config.services.pipewire.wireplumber.package ]
+    ++ lib.optionals vicinae [ pkgs.vicinae pkgs.nodejs ];
+  fonts.packages = with pkgs; [ inter fira-code ];
   xdg.portal.extraPortals = [ pkgs.xdg-desktop-portal-gtk ];
 
-  systemd.user.services.dms = {
-    after = [ "niri.service" ];
-    partOf = [ "niri.service" ];
+  systemd.user.services.dms = lib.mkIf dms {
+    after = niriUnit;
+    partOf = niriUnit;
   };
 
-  systemd.user.services.dsearch = {
-    after = [ "niri.service" ];
-    partOf = [ "niri.service" ];
+  systemd.user.services.dsearch = lib.mkIf dms {
+    after = niriUnit;
+    partOf = niriUnit;
   };
 
-  systemd.user.services.vicinae = {
+  systemd.user.services.niri-polkit = lib.mkIf (!dms) {
+    description = "Polkit authentication agent for Niri";
+    wantedBy = niriUnit;
+    after = niriUnit;
+    partOf = niriUnit;
+    serviceConfig.ExecStart = "${pkgs.polkit_gnome}/libexec/polkit-gnome-authentication-agent-1";
+  };
+
+  systemd.user.services.vicinae = lib.mkIf vicinae {
     description = "Vicinae launcher for Niri";
-    wantedBy = [ "niri.service" ];
-    after = [ "niri.service" ];
-    partOf = [ "niri.service" ];
+    wantedBy = niriUnit;
+    after = niriUnit;
+    partOf = niriUnit;
     unitConfig.ConditionEnvironment = "WAYLAND_DISPLAY";
     enableDefaultPath = false;
     environment = {

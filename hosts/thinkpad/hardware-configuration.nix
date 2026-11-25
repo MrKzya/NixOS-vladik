@@ -1,6 +1,7 @@
-{ ... }:
+{ lib, ... }:
 
 {
-  # Replace with this ThinkPad's nixos-generate-config output.
-  # Keep its actual root, ESP, swap and initrd hardware settings.
+  # Keep the generated root, ESP, swap and initrd settings in the ignored module.
+  imports = lib.optional (builtins.pathExists ./hardware-configuration.local.nix)
+    ./hardware-configuration.local.nix;
 }
