@@ -1,0 +1,18 @@
+--- a/install-grub.pl
++++ b/install-grub.pl
+@@ -16,0 +17,2 @@
++require "__NIXOS_VLADIK_GENERATION_LABELS__";
++my $generationTimeZone = "__NIXOS_VLADIK_SYSTEM_TZ__";
+@@ -567 +569,2 @@
+-addGeneration("@distroName@", "", $defaultConfig, $entryOptions, 1);
++my $defaultLabel = currentGenerationLabel("/nix/var/nix/profiles/system", $defaultConfig, $generationTimeZone);
++addGeneration($defaultLabel // "@distroName@", "", $defaultConfig, $entryOptions, 1);
+@@ -595,6 +598,2 @@
+-        my $date = strftime("%F", localtime(lstat($link)->mtime));
+-        my $version =
+-            -e "$link/nixos-version"
+-            ? readFile("$link/nixos-version")
+-            : basename((glob(dirname(Cwd::abs_path("$link/kernel")) . "/lib/modules/*"))[0]);
+-        addGeneration("@distroName@ - Configuration " . nrFromGen($link), " ($date - $version)", $link, $subEntryOptions, 0);
++        my $label = generationLabel($link, $generationTimeZone) // ("@distroName@ - " . nrFromGen($link));
++        addGeneration($label, "", $link, $subEntryOptions, 0);

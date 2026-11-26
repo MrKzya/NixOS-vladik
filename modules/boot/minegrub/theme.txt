@@ -1,0 +1,62 @@
+title-text: ""
+desktop-image: "background.png"
+terminal-border: "16"
+terminal-left: "8%"
+terminal-top: "8%"
+terminal-width: "84%"
+terminal-height: "84%"
+terminal-box: "term_*.png"
+terminal-font: "Monocraft Regular 22"
+
++ image {
+    left = 50%-360
+    top = 1%
+    file = "logo.png"
+}
+
++ boot_menu {
+    left = 50%-320
+    top = 35%
+    width = 640
+    height = 48%
+    item_font = "Minecraft Regular 30"
+    item_color = "#ffffff"
+    selected_item_color = "#ffffa0"
+    item_height = 42
+    item_padding = 0
+    item_spacing = 27
+    item_pixmap_style = "item_*.png"
+    selected_item_pixmap_style = "selected_item_*.png"
+    scrollbar = true
+    scrollbar_width = 26
+    scrollbar_frame = "item_*.png"
+    scrollbar_thumb = "selected_item_*.png"
+}
+
++ image {
+    left = 50%-372
+    top = 84%
+    file = "static_bar.png"
+}
+
++ label {
+    left = 6
+    top = 100%-25
+    height = 24
+    width = 35%
+    text = "Minegrub"
+    font = "Minecraft Regular 24"
+    color = "#ffffff"
+}
+
++ label {
+    id = "__timeout__"
+    left = 35%
+    top = 100%-25
+    height = 24
+    width = 64%
+    text = "Joining world in %d seconds"
+    align = "right"
+    font = "Minecraft Regular 24"
+    color = "#ffffff"
+}

@@ -41,6 +41,20 @@ let
       defaultSession = null;
     } // settings); }];
 
+  macbook = hosts.macbook.config;
+  thinkpad = hosts.thinkpad.config;
+  power = cfg: import ../modules/power/dms-settings.nix cfg.mySystem.laptopPower;
+  macNoRemap = (hosts.macbook.extendModules {
+    modules = [ { mySystem.macbook.macOSKeybindings.enable = lib.mkForce false; } ];
+  }).config;
+  macWithKey = key: (hosts.macbook.extendModules {
+    modules = [ { mySystem.macbook.macOSKeybindings = {
+      fnKey = key;
+      fnDevice = "fixture keyboard";
+    }; } ];
+  }).config;
+  macWithFn = macWithKey "KEY_FN";
+
   cases = {
     niri = desktopCase { };
     plasma = desktopCase { niri.enable = false; plasma.enable = true; };
@@ -77,6 +91,10 @@ in
     let cfg = hosts.${name}.config;
     in checkDesktop cfg
       && cfg.specialisation == { }
+      && builtins.elem "python3" (packageNames cfg)
+      && ((cfg.systemd.user.services ? macbook-shortcuts) ==
+        (name == "macbook" && cfg.mySystem.desktop.niri.enable && cfg.mySystem.macbook.macOSKeybindings.enable))
+      && ((cfg.mySystem ? laptopPower) == builtins.elem name [ "macbook" "thinkpad" ])
       && ((cfg.users.users.${cfg.mySystem.user}.initialPassword == "vm-only") == (name == "vm" && !(builtins.pathExists ../hosts/vm/installer.local.nix)))
       && (cfg.virtualisation.vmware.guest.enable == (name == "vmware"))
       && (name != "vmware" || !(cfg.virtualisation ? fileSystems))
@@ -118,10 +136,62 @@ in
     };
   }]);
 
+  laptop-power = test "laptop-power-and-keyboard" (
+    ((power macbook).batterySuspendTimeout == 0)
+    && ((power thinkpad).batterySuspendTimeout == 900)
+    && ((power thinkpad).acSuspendTimeout == 0)
+    && ((power thinkpad).batteryMonitorTimeout == 120)
+    && ((power thinkpad).acMonitorTimeout == 600)
+    && ((power thinkpad).batteryLockTimeout == 420)
+    && ((power thinkpad).acLockTimeout == 900)
+    && !macbook.systemd.sleep.settings.Sleep.AllowSuspend
+    && !(macbook.systemd.user.services ? swayidle)
+    && !(thinkpad.systemd.user.services ? swayidle)
+    && (macbook.security.wrappers.macbook-xremap.permissions == "u+rx,g-rwx,o-rwx")
+    && lib.hasInfix "Mod+Space repeat=false" (keybinds macbook)
+    && lib.hasInfix "Mod+Tab { next-window; }" (keybinds macbook)
+    && lib.hasInfix "Mod+Alt+TAB" (keybinds macbook)
+    && !lib.hasInfix "F24 repeat=false" (keybinds macbook)
+    && lib.hasInfix "F24 repeat=false" (keybinds macWithFn)
+    && lib.hasInfix "/-     XF86WakeUp" (keybinds (macWithKey "KEY_WAKEUP"))
+    && !(macNoRemap.systemd.user.services ? macbook-shortcuts)
+    && !lib.hasInfix "Mod+Space repeat=false" (keybinds macNoRemap)
+    && !lib.hasInfix "Mod+Space repeat=false" (keybinds cases.niri)
+  );
+
+  laptop-power-fixtures = pkgs.runCommand "laptop-power-fixtures" { nativeBuildInputs = [ pkgs.bash pkgs.jq ]; } ''
+    bash ${../.}/scripts/test-laptop-power.sh
+    touch "$out"
+  '';
+
+  niri-macbook-fn = validateNiri "macbook-fn" macWithFn;
+
+  python-path = pkgs.runCommand "python-on-path" { nativeBuildInputs = [ pkgs.python3 ]; } ''
+    python --version
+    python3 --version
+    printf '%s\n' 'assert 2 + 2 == 4' > example.py
+    python example.py
+    touch "$out"
+  '';
+
+  minegrub = pkgs.runCommand "minegrub-fixtures" {
+    nativeBuildInputs = [ pkgs.patch pkgs.perl pkgs.python3 ];
+  } ''
+    cp ${pkgs.path}/nixos/modules/system/boot/loader/grub/install-grub.pl .
+    chmod u+w install-grub.pl
+    patch --batch --fuzz=0 install-grub.pl < ${../modules/boot/minegrub/generations.patch}
+    grep -F 'nrFromGen($b) <=> nrFromGen($a)' install-grub.pl
+    grep -F 'addGeneration($label, "", $link, $subEntryOptions, 0)' install-grub.pl
+    perl ${./test-grub.pl} ${../modules/boot/minegrub/generation-labels.pl}
+    python ${./test-minegrub.py} ${../modules/boot/minegrub/theme.txt}
+    touch "$out"
+  '';
+
   installer = pkgs.runCommand "installer-fixtures" { nativeBuildInputs = [ pkgs.bash pkgs.jq pkgs.shellcheck ]; } ''
     cd ${../.}
-    shellcheck -x install.sh installer/tests/run.sh
+    shellcheck -x install.sh installer/tests/{run,efi}.sh scripts/{verify-linux-esp,macbook-backlight,dms-defaults,test-laptop-power}.sh
     bash installer/tests/run.sh
+    bash installer/tests/efi.sh
     touch "$out"
   '';
 

@@ -66,6 +66,7 @@
     bluetooth.enable = true;
     cursor.size = 24;
     grub.theme = "minegrub";
+    grub.efiVideoMode = "1024x768,1280x800,auto";
   };
 
   # Enable automatic or lid suspend after testing sleep on the installed kernel.
