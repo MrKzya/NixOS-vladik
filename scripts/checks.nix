@@ -29,6 +29,7 @@ let
       && lib.hasSuffix "/bin" cfg.systemd.user.services.vicinae.environment.PATH
     ))
     && ((home cfg).home.activation ? applyDmsWallpaperDefault == niriDms)
+    && ((cfg.environment.etc ? "xdg/kxkbrc") == desktop.plasma.enable)
     && ((home cfg).xdg.dataFile ? "wallpapers/Next/metadata.json" == desktop.plasma.enable);
 
   evaluate = modules: (hosts.vm.extendModules { inherit modules; }).config;
@@ -182,16 +183,17 @@ in
     patch --batch --fuzz=0 install-grub.pl < ${../modules/boot/minegrub/generations.patch}
     grep -F 'nrFromGen($b) <=> nrFromGen($a)' install-grub.pl
     grep -F 'addGeneration($label, "", $link, $subEntryOptions, 0)' install-grub.pl
-    perl ${./test-grub.pl} ${../modules/boot/minegrub/generation-labels.pl}
+    perl ${./test-grub.pl} ${../modules/boot/minegrub/generation-labels.pl} "$PWD/install-grub.pl"
     python ${./test-minegrub.py} ${../modules/boot/minegrub/theme.txt}
     touch "$out"
   '';
 
-  installer = pkgs.runCommand "installer-fixtures" { nativeBuildInputs = [ pkgs.bash pkgs.jq pkgs.shellcheck ]; } ''
+  installer = pkgs.runCommand "installer-fixtures" { nativeBuildInputs = [ pkgs.bash pkgs.jq pkgs.shellcheck pkgs.python3 ]; } ''
     cd ${../.}
     shellcheck -x install.sh installer/tests/{run,efi}.sh scripts/{verify-linux-esp,macbook-backlight,dms-defaults,test-laptop-power}.sh
     bash installer/tests/run.sh
     bash installer/tests/efi.sh
+    python installer/tests/test_progress.py
     touch "$out"
   '';
 

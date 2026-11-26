@@ -1,0 +1,35 @@
+Desktop|desktop.dms|DankMaterialShell
+Desktop|desktop.vicinae|Vicinae
+Applications|apps.firefox|Firefox
+Applications|apps.zen|Zen Browser
+Applications|apps.telegram|Telegram Desktop
+Applications|apps.vesktop|Vesktop
+Applications|apps.obsidian|Obsidian
+Applications|apps.nautilus|Files (Nautilus)
+Applications|apps.obs|OBS Studio
+Applications|apps.mpv|mpv
+Applications|apps.vlc|VLC
+Applications|apps.karing|Karing
+Applications|apps.tgProxy|Telegram Proxy
+Applications|apps.gpuScreenRecorder|GPU Screen Recorder
+Applications|apps.playerctl|Media player controls
+Terminal|apps.kitty|Kitty
+Terminal|apps.starship|Starship prompt
+Terminal|apps.fastfetch|Fastfetch
+Terminal|apps.pwgen|Password generator
+Terminal|apps.tmux|tmux
+Development|apps.vscode|Visual Studio Code
+Development|apps.zed|Zed
+Development|system.development|Development tools
+Gaming|gaming.steam|Steam
+Gaming|gaming.heroic|Heroic Games Launcher
+Gaming|gaming.lutris|Lutris
+Gaming|gaming.protonupQt|ProtonUp-Qt
+Gaming|gaming.prismLauncher|Prism Launcher
+Gaming|gaming.gamemode|GameMode
+Gaming|gaming.mangohud|MangoHud
+Hardware|hardware.bluetooth|Bluetooth
+System|system.flatpak|Flatpak
+System|system.appimage|AppImage support
+System|system.nixLd|Dynamic loader compatibility (nix-ld)
+System|system.osProber|Install OS detection tool

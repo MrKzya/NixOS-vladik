@@ -24,6 +24,12 @@ in
 
   config = {
     system.stateVersion = "26.05";
+    time.timeZone = lib.mkDefault "Europe/Moscow";
+    i18n.defaultLocale = lib.mkDefault "en_US.UTF-8";
+    console = {
+      keyMap = lib.mkDefault "ruwin_alt-UTF-8";
+      font = lib.mkDefault "LatArCyrHeb-16";
+    };
     nix.settings = {
       experimental-features = [ "nix-command" "flakes" ];
       auto-optimise-store = lib.mkDefault true;

@@ -14,19 +14,19 @@ cache_kernel() {
     report=$(nix_cmd eval --json --no-update-lock-file "path:$work/repo#nixosConfigurations.$profile" \
         --apply "$(<"$source_dir/installer/cache.nix")" 2>>"$log_file") || return 1
     jq -e '.initrdModules | index("apple-bce") != null' <<< "$report" >/dev/null ||
-        { fail 'Выбранное ядро T2 не соответствует initrd с apple-bce.'; return 1; }
+        { fail 'The T2 kernel does not match the apple-bce initrd.'; return 1; }
     mapfile -t kernel_paths < <(jq -r '[.image, .modules] + .externalModules | unique[]' <<< "$report")
     for path in "${kernel_paths[@]}"; do
         [[ $path =~ ^/nix/store/[a-z0-9]{32}-[^/]+$ ]] || return 1
         if ! run nix-store --realise "$path" --indirect --add-root "$work/${path##*/}" \
                 --option max-jobs 0 --option builders '' --option fallback false "${t2_options[@]}"; then
-            fail "Готовый объект T2 недоступен: $path. Сборка ядра отключена."
+            fail "Prebuilt T2 object unavailable: $path. Kernel builds are disabled."
             return 1
         fi
     done
     path=$(jq -er .modules <<< "$report") || return 1
-    kernel_has_bce "$path" || { fail 'В полученном дереве модулей отсутствует apple-bce.'; return 1; }
-    printf 'Ядро T2 %s и модули доступны в Live Store.\n' "$(jq -r .version <<< "$report")"
+    kernel_has_bce "$path" || { fail 'The downloaded modules do not contain apple-bce.'; return 1; }
+    printf 'T2 kernel %s and modules are available in the Live Nix store.\n' "$(jq -r .version <<< "$report")"
 }
 
 kernel_has_bce() {

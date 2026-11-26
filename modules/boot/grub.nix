@@ -51,7 +51,7 @@ in
         efi.canTouchEfiVariables = lib.mkDefault false;
         grub = {
           enable = true;
-          configurationLimit = lib.mkDefault 20;
+          configurationLimit = lib.mkDefault (if minegrub then 0 else 20);
           useOSProber = lib.mkDefault false;
           minegrub-world-sel.enable = cfg.theme == "world-selection";
         };

@@ -3,10 +3,15 @@
 
 project_clone() {
     [[ ! -e $work/repo ]] || return 0
-    run git -c "safe.directory=$source_dir" clone --no-local --single-branch \
-        --branch installer -- "$source_dir" "$work/checkout" &&
-    run git -C "$work/checkout" remote set-url origin https://github.com/MrKzya/NixOS-vladik.git &&
-    mv -T -- "$work/checkout" "$work/repo"
+    local checkout
+    checkout=$(mktemp -d "$work/checkout.XXXXXXXX") || return 1
+    if ! run git -c "safe.directory=$source_dir" clone --no-local --single-branch \
+        --branch installer -- "$source_dir" "$checkout" ||
+       ! run git -C "$checkout" remote set-url origin https://github.com/MrKzya/NixOS-vladik.git ||
+       ! mv -T -- "$checkout" "$work/repo"; then
+        rm -rf -- "$checkout"
+        return 1
+    fi
 }
 
 config_generate() {
@@ -61,7 +66,7 @@ firmware_import() {
             brcmbt*.bin|brcmbt*.bin.*) bluetooth=true ;;
         esac
         if [[ ${seen[$name]+found} ]]; then
-            fail "Неоднозначное имя файла firmware: $name"
+            fail "Duplicate firmware filename: $name"
             return 1
         fi
         seen[$name]=1
@@ -69,12 +74,12 @@ firmware_import() {
     done <<< "$listing"
 
     if ! "$wifi" || ! "$calibration"; then
-        fail 'Не найдена пара board-specific Wi-Fi firmware (.bin) и NVRAM (.txt).'
+        fail 'Missing board-specific Wi-Fi firmware (.bin) or NVRAM (.txt).'
         return 1
     fi
-    "$clm" || printf 'CLM blob не найден в источнике firmware.\n'
+    "$clm" || printf 'The firmware source has no CLM blob.\n'
     if ! "$bluetooth" && [[ $model == MacBookAir9,1 ]]; then
-        printf 'В источнике отсутствует firmware Bluetooth BCM4377.\n'
+        printf 'The source has no BCM4377 Bluetooth firmware.\n'
     fi
 
     mkdir -p -- "$destination" || return 1
@@ -86,7 +91,7 @@ firmware_import() {
             # Extract bytes only. An archive entry can never set a destination pathname or symlink.
             tar -xOf "$source" -- "$member" > "$destination/$name" || return 1
         fi
-        [[ -s $destination/$name ]] || { fail "Пустой файл firmware: $name"; return 1; }
+        [[ -s $destination/$name ]] || { fail "Empty firmware file: $name"; return 1; }
     done
 }
 
@@ -106,7 +111,7 @@ config_save() {
     else
         [[ -d $dest/.git && ! -L $dest/.git &&
            $(git -C "$dest" rev-parse HEAD) == "$revision" ]] ||
-            { fail 'В /etc/nixos/NixOS-vladik находится другой репозиторий.'; return 1; }
+            { fail 'A different checkout exists at /etc/nixos/NixOS-vladik.'; return 1; }
         for local_name in installer.local.nix hardware.generated.local.nix settings.local.json; do
             install -m 0600 -T -- "$work/repo/hosts/$profile/$local_name" "$dest/hosts/$profile/$local_name" || return 1
         done

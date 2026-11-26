@@ -22,5 +22,12 @@
       cursorTheme=macOS
       cursorSize=${toString config.mySystem.cursor.size}
     '';
+    environment.etc."xdg/kxkbrc".text = ''
+      [Layout]
+      Use=true
+      LayoutList=us,ru
+      ResetOldOptions=true
+      Options=grp:alt_shift_toggle
+    '';
   };
 }

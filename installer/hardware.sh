@@ -30,9 +30,9 @@ detect_profile() {
 hardware_check() {
     if [[ $profile == macbook ]]; then
         [[ ${vendor,,} == *apple* ]] && is_t2_macbook "$model" ||
-            { fail 'Профиль macbook требует подтверждённую модель Intel MacBook T2.'; return 1; }
+            { fail 'The macbook profile requires a supported Intel MacBook T2 model.'; return 1; }
     elif [[ ${vendor,,} == *apple* ]]; then
-        fail 'Для физического Apple Mac установка разрешена только через профиль macbook с проверкой ESP.'
+        fail 'Use the macbook profile on Apple hardware to enable EFI safety checks.'
         return 1
     fi
 }

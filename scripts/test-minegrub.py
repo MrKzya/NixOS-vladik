@@ -20,7 +20,7 @@ for pixels in (600, 720, 768, 800, 1080, 1600):
     assert top + height <= pixels * bar_top // 100
     visible = (height + spacing) // (item + spacing)
     assert visible > 0
-    for generations in (1, 4, 5, 10, 20):
+    for generations in (1, 4, 5, 10, 20, 27):
         for selection in range(generations):
             start = max(0, selection - visible + 1)
             end = min(generations, start + visible)
@@ -29,4 +29,4 @@ for pixels in (600, 720, 768, 800, 1080, 1600):
                     for i in range(end - start)]
             assert all(a[1] <= b[0] for a, b in zip(rows, rows[1:]))
             assert rows[-1][1] <= top + height
-print("Minegrub layout bounds for 1, 4, 5, 10 and 20 entries passed.")
+print("Minegrub layout bounds for 1, 4, 5, 10, 20 and 27 entries passed.")

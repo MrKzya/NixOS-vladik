@@ -1,9 +1,9 @@
 {
   "blockdevices": [
-    {"name":"/dev/nvme9n1","type":"disk","size":99000000000,"ro":false,"mountpoints":[null]},
+    {"name":"/dev/nvme9n1","type":"disk","size":99000000000,"pttype":"gpt","ptuuid":"10000000-0000-0000-0000-000000000000","ro":false,"mountpoints":[null]},
     {"name":"/dev/nvme9n1p9","pkname":"/dev/nvme9n1","maj:min":"259:9","type":"part","size":300000000,"fstype":"vfat","fsver":"FAT32","ro":false,"parttype":"c12a7328-f81f-11d2-ba4b-00a0c93ec93b","partuuid":"10000000-0000-0000-0000-000000000001","mountpoints":[null],"start":64},
     {"name":"/dev/nvme9n1p8","pkname":"/dev/nvme9n1","maj:min":"259:8","type":"part","size":40000000000,"fstype":"apfs","ro":false,"parttype":"7c3457ef-0000-11aa-aa11-00306543ecac","partuuid":"10000000-0000-0000-0000-000000000002","mountpoints":[null],"start":600000},
-    {"name":"/dev/nvme9n1p7","pkname":"/dev/nvme9n1","maj:min":"259:7","type":"part","size":1073741824,"fstype":"vfat","fsver":"FAT32","ro":false,"parttype":"c12a7328-f81f-11d2-ba4b-00a0c93ec93b","partuuid":"10000000-0000-0000-0000-000000000003","mountpoints":[null],"start":85000000},
+    {"name":"/dev/nvme9n1p7","pkname":"/dev/nvme9n1","maj:min":"259:7","type":"part","size":1073741824,"fstype":"vfat","fsver":"FAT32","uuid":"AAAA-BBBB","ro":false,"parttype":"c12a7328-f81f-11d2-ba4b-00a0c93ec93b","partuuid":"10000000-0000-0000-0000-000000000003","mountpoints":[null],"start":85000000},
     {"name":"/dev/nvme9n1p6","pkname":"/dev/nvme9n1","maj:min":"259:6","type":"part","size":32000000000,"fstype":"btrfs","ro":false,"uuid":"aaaaaaaa-0000-0000-0000-000000000004","partuuid":"10000000-0000-0000-0000-000000000004","mountpoints":[null],"start":88000000}
   ]
 }
