@@ -26,22 +26,68 @@ config_generate() {
         . + {profile:$profile, nameservers:$ns, firmware:$firmware,
           storage:{rootUuid:$root,fsType:$fs,efiPartuuid:$efi,applePartuuid:$apple}}' <<< "$settings") || return 1
     printf '%s\n' "$options" > "$dest/settings.local.json" || return 1
-    if [[ $profile == macbook && $firmware_mode == live ]]; then
-        firmware_from_live "$dest/firmware/brcm" || return 1
+    if [[ $profile == macbook ]]; then
+        case "$firmware_mode" in
+            live) firmware_import /lib/firmware/brcm "$dest/firmware/brcm" || return 1 ;;
+            archive) firmware_import "$firmware_archive" "$dest/firmware/brcm" || return 1 ;;
+        esac
     fi
     run nix_cmd eval --raw --no-update-lock-file "path:$work/repo#nixosConfigurations.$profile.config.system.build.toplevel.drvPath"
 }
 
-firmware_from_live() {
-    local firmware
-    local -a files=()
-    while IFS= read -r -d '' firmware; do
-        files+=("$firmware")
-    done < <(find -L /lib/firmware/brcm -maxdepth 1 -type f \( \
-        -name 'brcmfmac*-pcie.apple,*' -o -name 'brcmbt*apple*' \) -print0 2>/dev/null)
-    (( ${#files[@]} )) ||
-        { fail 'В Live не найдены подготовленные файлы Broadcom для Apple.'; return 1; }
-    mkdir -p -- "$1" && cp -L -- "${files[@]}" "$1/"
+firmware_import() {
+    local source=$1 destination=$2 listing member name
+    local wifi=false calibration=false clm=false bluetooth=false
+    local -a selected=()
+    local -A seen=()
+    if [[ -d $source ]]; then
+        listing=$(find -L "$source" -maxdepth 1 -type f -printf '%f\n') || return 1
+    else
+        listing=$(tar -tf "$source") || return 1
+    fi
+    while IFS= read -r member; do
+        name=${member#./}
+        [[ $name =~ ^(brcmfmac[[:alnum:]]+-pcie(\.apple,[[:alnum:],_-]+)?|brcmbt[[:alnum:]]+-apple,[[:alnum:],_-]+)\.(bin|txt|clm_blob|txcap_blob|ptb|hcd)(\.(zst|xz))?$ ]] || continue
+        if [[ $model == MacBookAir9,1 ]]; then
+            case "$name" in
+                brcmfmac4377b3-pcie.apple,formosa*.*|brcmfmac4377b3-pcie.clm_blob*|brcmfmac4377b3-pcie.txcap_blob*|brcmbt4377b3-apple,formosa*.*) ;;
+                *) continue ;;
+            esac
+        fi
+        case "$name" in
+            brcmfmac*-pcie.apple,*.bin|brcmfmac*-pcie.apple,*.bin.*) wifi=true ;;
+            brcmfmac*-pcie.apple,*.txt|brcmfmac*-pcie.apple,*.txt.*) calibration=true ;;
+            brcmfmac*.clm_blob|brcmfmac*.clm_blob.*) clm=true ;;
+            brcmbt*.bin|brcmbt*.bin.*) bluetooth=true ;;
+        esac
+        if [[ ${seen[$name]+found} ]]; then
+            fail "Неоднозначное имя файла firmware: $name"
+            return 1
+        fi
+        seen[$name]=1
+        selected+=("$member")
+    done <<< "$listing"
+
+    if ! "$wifi" || ! "$calibration"; then
+        fail 'Не найдена пара board-specific Wi-Fi firmware (.bin) и NVRAM (.txt).'
+        return 1
+    fi
+    "$clm" || printf 'CLM blob не найден в источнике firmware.\n'
+    if ! "$bluetooth" && [[ $model == MacBookAir9,1 ]]; then
+        printf 'В источнике отсутствует firmware Bluetooth BCM4377.\n'
+    fi
+
+    mkdir -p -- "$destination" || return 1
+    for member in "${selected[@]}"; do
+        name=${member#./}
+        if [[ -d $source ]]; then
+            cp -L -- "$source/$member" "$destination/$name" || return 1
+        else
+            # Extract bytes only. An archive entry can never set a destination pathname or symlink.
+            tar -xOf "$source" -- "$member" > "$destination/$name" || return 1
+        fi
+        [[ -s $destination/$name ]] || { fail "Пустой файл firmware: $name"; return 1; }
+    done
 }
 
 config_save() {
@@ -64,7 +110,7 @@ config_save() {
         for local_name in installer.local.nix hardware.generated.local.nix settings.local.json; do
             install -m 0600 -T -- "$work/repo/hosts/$profile/$local_name" "$dest/hosts/$profile/$local_name" || return 1
         done
-        if [[ $profile == macbook && $firmware_mode == live ]]; then
+        if [[ $profile == macbook && ( $firmware_mode == live || $firmware_mode == archive ) ]]; then
             mkdir -p "$dest/hosts/$profile/firmware/brcm" &&
             cp -a "$work/repo/hosts/$profile/firmware/brcm/." "$dest/hosts/$profile/firmware/brcm/" || return 1
         fi

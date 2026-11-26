@@ -29,6 +29,13 @@ in
       description = "Existing macOS ESP /dev/disk/by-partuuid/... (local module only).";
     };
     localFirmware.enable = lib.mkEnableOption "local Broadcom firmware from hosts/macbook/firmware/brcm";
+    wifiBackend = lib.mkOption {
+      type = lib.types.enum [ "iwd" "wpa_supplicant" ];
+      default = "iwd";
+      description = "NetworkManager Wi-Fi backend for testing Broadcom associations.";
+    };
+    blacklistBroadcomWifi = lib.mkEnableOption "disable brcmfmac at boot while checking T2 suspend";
+    zram.enable = lib.mkEnableOption "ZRAM at up to 50 percent of RAM on MacBook";
     intelMedia.enable = lib.mkEnableOption "Intel VA-API media driver";
   };
 
@@ -38,7 +45,8 @@ in
       extra-trusted-public-keys = [ cache.key ];
     };
 
-    networking.networkmanager.wifi.backend = lib.mkDefault "iwd";
+    # WPA handshakes can be compared across backends without changing the kernel.
+    networking.networkmanager.wifi.backend = lib.mkDefault cfg.wifiBackend;
 
     # Require an explicit confirmation before permitting the removable fallback install.
     boot.loader = {
@@ -79,30 +87,19 @@ in
       }
     ];
 
-    # nixos-install enters /mnt as the target root and invokes the same boot action.
+    # nixos-install invokes this check inside nixos-enter, before running GRUB.
     system.preSwitchChecks.verifyLinuxEsp = ''
       case "$2" in
         boot|switch)
-          findmnt=${pkgs.util-linux}/bin/findmnt
-          readlink=${pkgs.coreutils}/bin/readlink
-          lsblk=${pkgs.util-linux}/bin/lsblk
-          esp_type=c12a7328-f81f-11d2-ba4b-00a0c93ec93b
-          linux=$("$readlink" -e ${lib.escapeShellArg (toString cfg.linuxEsp)}) || exit 1
-          macos=$("$readlink" -e ${lib.escapeShellArg (toString cfg.macosEsp)}) || exit 1
-          source=$("$findmnt" --noheadings --raw --mountpoint /boot --output SOURCE) || exit 1
-          mounted=$("$readlink" -e "$source") || exit 1
-          if [ ! -b "$linux" ] || [ ! -b "$macos" ] || [ "$linux" = "$macos" ] ||
-             [ "$mounted" != "$linux" ] ||
-             [ "$("$findmnt" --noheadings --raw --mountpoint /boot --output FSTYPE)" != vfat ] ||
-             [ "$("$lsblk" -dn -o PARTTYPE "$linux")" != "$esp_type" ] ||
-             [ "$("$lsblk" -dn -o PARTTYPE "$macos")" != "$esp_type" ] ||
-             [ -e /boot/EFI/APPLE ]; then
-            echo 'Refusing to update GRUB: /boot is not the confirmed Linux GPT ESP.' >&2
-            exit 1
-          fi
+          PATH=${lib.makeBinPath [ pkgs.util-linux pkgs.coreutils ]} \
+            ${pkgs.bash}/bin/bash ${../../scripts/verify-linux-esp.sh} \
+              ${lib.escapeShellArgs [ (toString cfg.linuxEsp) (toString cfg.macosEsp) ]} || exit 1
           ;;
       esac
     '';
+
+    boot.blacklistedKernelModules = lib.optionals cfg.blacklistBroadcomWifi [ "brcmfmac" "brcmfmac_wcc" ];
+    zramSwap = lib.mkIf cfg.zram.enable { enable = true; memoryPercent = 50; };
 
     hardware.firmware = lib.mkIf cfg.localFirmware.enable [
       (pkgs.runCommand "macbook-t2-local-firmware" { src = firmwareDir + "/brcm"; } ''

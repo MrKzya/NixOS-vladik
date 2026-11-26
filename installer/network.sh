@@ -55,7 +55,14 @@ network_route() {
             return 0
         fi
     done
-    fail 'Не найден интерфейс с IP-адресом и маршрутом в интернет. Проверьте подключение Live ISO.'
+    addresses=$(ip -j address show 2>/dev/null) || return 1
+    if ! jq -e 'any(.[]; .ifname != "lo" and any(.flags[]; . == "LOWER_UP"))' <<< "$addresses" >/dev/null; then
+        fail 'Активный сетевой линк не найден.'
+    elif ! jq -e 'any(.[]; .ifname != "lo" and any(.addr_info[]; .scope == "global"))' <<< "$addresses" >/dev/null; then
+        fail 'Сетевой линк есть, но IP-адрес не назначен.'
+    else
+        fail 'IP-адрес есть, маршрут до внешней сети отсутствует.'
+    fi
 }
 
 network_resolves() {
@@ -99,6 +106,20 @@ network_try_dns() {
     network_resolves
 }
 
+https_probe() {
+    local url=$1 status=0
+    curl --proto '=https' --proto-redir '=https' --location --connect-timeout 5 --max-time 12 \
+        --fail --silent --show-error --output /dev/null "$url" >>"$log_file" 2>&1 || status=$?
+    case $status in
+        0) return 0 ;;
+        5|6) fail "Ошибка DNS для $url" ;;
+        35|51|58|59|60|77|82|83|90|91) fail "Ошибка TLS для $url. Проверьте системное время и сертификаты." ;;
+        22) fail "Источник вернул ошибку HTTP: $url" ;;
+        7|28) fail "Соединение или тайм-аут для $url. Проверьте доступ по IPv4 и IPv6." ;;
+        *) fail "Источник недоступен: $url (curl $status)." ;;
+    esac
+}
+
 network_preflight() {
     local endpoint rev
     local -a servers=()
@@ -126,16 +147,10 @@ network_preflight() {
         "https://cache.nixos.org/nix-cache-info"
     )
     for endpoint in "${endpoints[@]}"; do
-        # codeload's root redirects or responds without a tarball; metadata below checks the actual inputs.
-        if ! curl --proto '=https' --proto-redir '=https' --location --max-time 15 --retry 1 \
-            --fail --silent --show-error --output /dev/null "$endpoint" >>"$log_file" 2>&1; then
-            fail "HTTPS недоступен: $endpoint"
-            return 1
-        fi
+        https_probe "$endpoint" || return 1
     done
     if [[ $profile == macbook ]]; then
-        curl --proto '=https' --fail --silent --show-error --max-time 8 \
-            --output /dev/null "$cache_url/nix-cache-info" >>"$log_file" 2>&1 ||
+        https_probe "$cache_url/nix-cache-info" ||
             printf 'Публичный кеш T2 недоступен. Будет проверен локальный Nix Store.\n'
     fi
 }

@@ -35,16 +35,23 @@ in
     };
 
     nixpkgs.config.allowUnfreePredicate = pkg:
-      builtins.elem (lib.getName pkg) [
+      builtins.elem (lib.getName pkg) ([
         "apple_cursor"
-        "brcm-firmware"
         "obsidian"
         "vscode"
         "steam"
         "steam-original"
         "steam-run"
         "steam-unwrapped"
-      ];
+      ] ++ lib.optionals (cfg ? macbook) [
+        "brcm-firmware"
+        "brcm-firmware-sonoma"
+        "brcm-firmware-sonoma-zstd"
+        "brcm-firmware-ventura"
+        "brcm-firmware-ventura-zstd"
+        "brcm-firmware-monterey"
+        "brcm-firmware-monterey-zstd"
+      ]);
 
     networking.networkmanager.enable = true;
     programs.fish.enable = true;
@@ -63,6 +70,7 @@ in
       iproute2
       nano
       ntfs3g
+      python3
       ripgrep
       tree
     ];

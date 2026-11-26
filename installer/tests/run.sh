@@ -112,6 +112,26 @@ network_restore_dns
 grep -Fx 'dns wlan-test 1.1.1.1' "$log_file" >/dev/null
 grep -Fx 'dns wlan-test 10.0.0.1' "$log_file" >/dev/null
 
+printf 'HTTPS diagnostics and board-specific firmware import\n'
+curl() { return 60; }
+if https_probe https://test.invalid 2> "$work/tls"; then fail_test 'TLS failure accepted'; fi
+grep -F 'Ошибка TLS' "$work/tls" >/dev/null
+curl() { return 22; }
+if https_probe https://test.invalid 2> "$work/http"; then fail_test 'HTTP error accepted'; fi
+grep -F 'Источник вернул ошибку HTTP' "$work/http" >/dev/null
+mkdir "$work/broadcom"
+printf 'test\n' > "$work/broadcom/brcmfmac4377b3-pcie.apple,formosa.bin"
+printf 'test\n' > "$work/broadcom/brcmfmac4377b3-pcie.apple,formosa-xyz.txt"
+printf 'test\n' > "$work/broadcom/brcmfmac4377b3-pcie.apple,wrong-board.txt"
+printf 'test\n' > "$work/broadcom/brcmbt4377b3-apple,formosa.bin"
+(cd "$work/broadcom" && tar -cf "$work/firmware.tar" .)
+firmware_import "$work/firmware.tar" "$work/imported"
+[[ -s $work/imported/brcmbt4377b3-apple,formosa.bin ]]
+[[ ! -e $work/imported/brcmfmac4377b3-pcie.apple,wrong-board.txt ]]
+rm -- "$work/broadcom/brcmfmac4377b3-pcie.apple,formosa-xyz.txt"
+(cd "$work/broadcom" && tar -cf "$work/missing.tar" .)
+reject firmware_import "$work/missing.tar" "$work/incomplete"
+
 printf 'Interactive selection persists through menus and dry-run\n'
 settings='{"hostname":"nixos-test","user":"emptyfixture","timezone":"UTC","locale":"en_US.UTF-8",
   "theme":"minegrub","desktop":{"niri":{"enable":true},"plasma":{"enable":false},

@@ -5,6 +5,7 @@ let
   settings = builtins.fromJSON (builtins.readFile (configDir + "/settings.local.json"));
   inherit (settings) profile;
   mac = profile == "macbook";
+  importedFirmware = builtins.elem settings.firmware [ "live" "archive" ];
   devices = settings.storage;
   byPartuuid = id: "/dev/disk/by-partuuid/" + id;
   switches = group: lib.mapAttrs (_: enabled: { enable = lib.mkOverride 90 enabled; })
@@ -30,7 +31,7 @@ in
     macbook = {
       linuxEsp = byPartuuid devices.efiPartuuid;
       macosEsp = byPartuuid devices.applePartuuid;
-      localFirmware.enable = lib.mkOverride 90 (settings.firmware == "live");
+      localFirmware.enable = lib.mkOverride 90 importedFirmware;
     };
   };
 
@@ -61,7 +62,7 @@ in
     };
   };
 } // lib.optionalAttrs mac {
-  hardware.apple-t2.firmware = lib.mkIf (settings.firmware != "none" && settings.firmware != "live") {
+  hardware.apple-t2.firmware = lib.mkIf (builtins.elem settings.firmware [ "sonoma" "ventura" "monterey" ]) {
     enable = lib.mkOverride 90 true;
     version = lib.mkOverride 90 settings.firmware;
   };

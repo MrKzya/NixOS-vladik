@@ -51,6 +51,12 @@ retry() {
                 ui_dns || :
                 continue
             fi
+        elif [[ $1 == config_generate && $profile == macbook ]]; then
+            prompt 'Enter — повторить, f — источник firmware, q — выйти из этапа.' || return 1
+            if [[ $reply == f ]]; then
+                ui_firmware || :
+                continue
+            fi
         else
             prompt 'Enter — повторить, q — выйти из этапа.' || return 1
         fi
@@ -154,7 +160,7 @@ main() {
     fi
     local command
     for command in git jq nix nix-store nixos-generate-config nixos-install nixos-enter lsblk findmnt \
-        ip getent curl flock unshare; do
+        ip getent curl flock unshare tar; do
         command -v "$command" >/dev/null ||
             { fail "В Live ISO отсутствует $command. См. docs/INSTALLATION.md."; return 1; }
     done

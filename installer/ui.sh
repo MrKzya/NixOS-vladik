@@ -171,6 +171,19 @@ ui_dns() {
     dns_mode=$selection
 }
 
+ui_firmware() {
+    select_item 'Firmware Broadcom' 0 live archive sonoma ventura monterey none || return 0
+    if [[ $selection == archive ]]; then
+        local archive
+        prompt "Путь к архиву t2linux или каталогу firmware [${firmware_archive:-—}]" || return 1
+        archive=${reply:-${firmware_archive:-}}
+        [[ $archive == /* && -r $archive && ( -f $archive || -d $archive ) ]] ||
+            { fail 'Требуется доступный абсолютный путь.'; return 1; }
+        firmware_archive=$archive
+    fi
+    firmware_mode=$selection
+}
+
 ui_plan() {
     printf '\nПлан установки\n'
     printf 'Модель   %s %s\nПрофиль  %s\nКорень   %s (%s)\nESP      %s (FAT32)\n' \
@@ -231,10 +244,7 @@ ui_menu() {
                fi ;;
             8) ui_dns || :
                network_preflight || : ;;
-            9) if [[ $profile == macbook ]] &&
-                  select_item 'Firmware Broadcom (Live или образ Recovery)' 0 live sonoma ventura monterey none; then
-                   firmware_mode=$selection
-               fi ;;
+            9) [[ $profile != macbook ]] || ui_firmware || : ;;
             q) return 1 ;;
             '')
                 [[ -n $root_dev && -n $esp_dev ]] || { fail 'Выберите оба раздела.'; continue; }
