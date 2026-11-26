@@ -11,6 +11,7 @@ import time
 COPY_PATH, TRANSFER, COPY_PATHS, BUILDS, BUILD, SUBSTITUTE = 100, 101, 103, 104, 105, 108
 BUILD_LINE, PROGRESS = 101, 105
 MIB = 1024 ** 2
+ANSI = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
 RETRYABLE = re.compile(
     r"curl: \((?:5|6|7|18|28|52|55|56)\)|timed? out|timeout was reached|too slow|"
     r"transferred a partial file|could not resolve (?:host|proxy)|failed to connect|"
@@ -29,7 +30,7 @@ def redact(line):
 
 
 def printable(text):
-    return "".join(char if " " <= char <= "~" else "?" for char in text)
+    return "".join(char if " " <= char <= "~" else "?" for char in ANSI.sub("", text))
 
 
 def clock(seconds):
@@ -58,6 +59,7 @@ class Progress:
 
     def update(self, line, now):
         if not line.startswith("@nix "):
+            line = ANSI.sub("", line)
             if not line.strip():
                 return
             self.retryable |= bool(RETRYABLE.search(line))
@@ -127,7 +129,7 @@ class Progress:
                     self.errors = (self.errors + [message])[-8:]
                 self.last_activity = now
         elif action == "msg":
-            msg = event.get("msg", "")
+            msg = ANSI.sub("", event.get("msg", ""))
             if msg:
                 self.retryable |= bool(RETRYABLE.search(msg))
                 self.current = msg.strip().splitlines()[0]
@@ -228,7 +230,7 @@ def monitor(log, retry_marker, errors_path, started, command):
     selector.close()
     if code and not interrupted:
         with open(errors_path, "w", encoding="ascii", errors="replace") as errors:
-            errors.write("\n".join(state.errors) + "\n")
+            errors.write("\n".join(printable(line) for error in state.errors for line in error.splitlines()) + "\n")
         if state.retryable:
             with open(retry_marker, "w", encoding="ascii"):
                 pass

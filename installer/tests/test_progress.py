@@ -40,6 +40,12 @@ class InstallerProgressTest(unittest.TestCase):
         state.update(event("stop", 3), now=30)
         self.assertEqual(state.downloaded(), 1048576 + 12 * 1024)
 
+    def test_colored_nix_http_error(self):
+        state = Progress()
+        state.update(event("msg", 0, msg="error: HTTP error \033[35;1m503\033[0m", level=0), now=5)
+        self.assertTrue(state.retryable)
+        self.assertEqual(state.errors, ["error: HTTP error 503"])
+
     def test_fetch_failure_log_and_child_exit(self):
         for message, retry in (("curl: (28) Operation too slow", True),
                                ("curl error: Transferred a partial file", True), ("hash mismatch", False)):
