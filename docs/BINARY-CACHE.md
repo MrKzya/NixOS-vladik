@@ -25,7 +25,7 @@
 | 6.18.64, обычное ядро ThinkPad, VMware и QEMU | `/nix/store/qpbd6dabgk9zhg2i8f47shfkl89i5ag4-linux-6.18.64` | Подписанный narinfo в cache.nixos.org, HTTP 200 |
 | 6.18.64 T2 из V2 | `/nix/store/vk34zvxq6vxyn0vf4rj28b2aa3x17gfq-linux-t2-6.18.64` | HTTP 404 во всех проверенных кешах |
 
-Источники проверены 25 ноября 2026 г. Оба необходимых объекта 6.18.35 отсутствовали в `cache.soopy.moe` и `cache.nixos.org`, хотя оба сервера отвечали на `nix-cache-info`. Кеш Soopy упоминается в FAQ t2linux. Ядро 6.18.55 ранее не удалось получить по проверенному владельцем хешу. [FAQ t2linux](https://wiki.t2linux.org/distributions/nixos/faq/)
+Точные объекты 6.18.35 повторно скачаны в отдельный Store и проверены по доверенной подписи 26 ноября 2026 г. Оба необходимых объекта 6.18.35 отсутствовали в `cache.soopy.moe` и `cache.nixos.org`, хотя оба сервера отвечали на `nix-cache-info`. Кеш Soopy упоминается в FAQ t2linux. Ядро 6.18.55 ранее не удалось получить по проверенному владельцем хешу. [FAQ t2linux](https://wiki.t2linux.org/distributions/nixos/faq/)
 
 Скачанное дерево содержит `apple-bce`, `hid-apple`, `nvme`, `i915`, `brcmfmac`, `hci_bcm4377` и `btrfs`. NixOS собирает initrd с `apple-bce` на основе этих модулей. Варианты на стеке `t2bce` требуют пересмотра конфигурации ранней загрузки и собственной проверки бинарных объектов.
 

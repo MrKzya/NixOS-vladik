@@ -12,15 +12,18 @@
    ```bash
    findmnt -no SOURCE,FSTYPE,OPTIONS /
    findmnt -no SOURCE,FSTYPE,OPTIONS /boot
+   python --version
+   python3 --version
    lsmod | grep vmwgfx
    journalctl --user -b -u niri -u dms -u vicinae
    ```
 
-5. На отдельных снимках ВМ проверяются Ext4, повтор после прерывания сборки, отсутствие сети, DNS и свободного места, два графических сеанса в Ly и TTY. Проверка недоступного ядра T2 выполняется через fixtures без подмены аппаратного профиля на ВМ.
+5. В GRUB проверяются метки, прокрутка, запуск предыдущего поколения и rollback. Для визуальной проверки подходят отдельные снимки с 1, 4, 5, 10 и 20 поколениями.
+6. На отдельных снимках ВМ проверяются Ext4, повтор после прерывания сборки, отсутствие сети, DNS и свободного места, два графических сеанса в Ly и TTY. Проверка недоступного ядра T2 выполняется через fixtures без подмены аппаратного профиля на ВМ.
 
 ```bash
 bash installer/tests/run.sh
-nix build --no-link "path:$PWD#checks.x86_64-linux."{installer,components,desktop-matrix,niri-vmware}
+nix build --no-link "path:$PWD#checks.x86_64-linux."{installer,components,desktop-matrix,niri-vmware,python-path,minegrub}
 ```
 
 ## Существующая ВМ
