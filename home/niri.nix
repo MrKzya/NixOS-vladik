@@ -20,9 +20,14 @@ let
     ];
     text = builtins.readFile ../scripts/apply-dms-wallpaper-default.sh;
   };
+  laptopPower = cfg.laptopPower.enable or false;
+  keyboardIdle = (cfg.macbook.keyboardBacklight.enable or false) &&
+    (cfg.macbook.keyboardBacklight.idle.enable or false);
+  powerDefaults = lib.optionalAttrs laptopPower (import ../modules/power/dms-settings.nix cfg.laptopPower);
+  powerFile = pkgs.writeText "laptop-dms-defaults.json" (builtins.toJSON powerDefaults);
   cursorSize = nixosConfig.mySystem.cursor.size;
   dmsSettings = builtins.fromJSON (builtins.readFile (dms + "/settings.json"));
-  dmsSeed = pkgs.writeText "dms-settings.json" (builtins.toJSON (dmsSettings // {
+  dmsSeed = pkgs.writeText "dms-settings.json" (builtins.toJSON (dmsSettings // powerDefaults // {
     customThemeFile = "${configHome}/dms/themes/kanagawa/theme.json";
     cursorSettings = dmsSettings.cursorSettings // { theme = "macOS"; size = cursorSize; };
   }));
@@ -74,6 +79,18 @@ in
   home.activation.seedVicinae = lib.mkIf enableVicinae (
     lib.hm.dag.entryAfter [ "linkGeneration" ] (seed ../configs/vicinae/settings.json "vicinae/settings.json")
   );
+
+  home.activation.dmsLaptopDefaults = lib.mkIf (enableDms && (laptopPower || keyboardIdle))
+    (lib.hm.dag.entryAfter [ "seedDms" ] (
+      let
+        command = "${pkgs.bash}/bin/bash ${../scripts/dms-defaults.sh}";
+        configDirs = [ "dms" "DankMaterialShell" ];
+      in lib.concatMapStrings (dir: lib.optionalString laptopPower ''
+        PATH=${lib.makeBinPath [ pkgs.jq pkgs.coreutils ]} run ${command} power ${lib.escapeShellArg "${configHome}/${dir}/settings.json"} ${powerFile}
+      '' + lib.optionalString keyboardIdle ''
+        PATH=${lib.makeBinPath [ pkgs.jq pkgs.coreutils ]} run ${command} plugin ${lib.escapeShellArg "${configHome}/${dir}/plugin_settings.json"}
+      '') configDirs
+    ));
 
   home.activation.applyDmsWallpaperDefault = lib.mkIf enableDms (lib.hm.dag.entryAfter [ "seedDms" ] ''
     run ${lib.getExe applyWallpaper} ${lib.escapeShellArgs [ config.xdg.stateHome wallpaper ]}

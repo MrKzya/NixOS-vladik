@@ -65,7 +65,7 @@ in
       };
 
       environment = {
-        systemPackages = with pkgs; [ brightnessctl ];
+        systemPackages = [ pkgs.brightnessctl config.services.pipewire.wireplumber.package ];
         sessionVariables = {
           XCURSOR_THEME = "macOS";
           XCURSOR_SIZE = toString cursorSize;

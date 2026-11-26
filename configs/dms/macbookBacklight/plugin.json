@@ -1,0 +1,8 @@
+{
+  "id": "macbookBacklight",
+  "name": "MacBook keyboard backlight",
+  "description": "Turn the keyboard backlight off while idle",
+  "version": "1.0.0",
+  "type": "daemon",
+  "component": "./Backlight.qml"
+}

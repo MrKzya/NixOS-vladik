@@ -2,6 +2,25 @@
 
 let
   source = builtins.readFile ../configs/niri/cfg/keybinds.kdl;
+  mac = cfg.macbook.macOSKeybindings.enable or false;
+  fn = mac && (cfg.macbook.macOSKeybindings.fnKey or null) != null;
+  backlight = cfg.macbook.keyboardBacklight.enable or false;
+  moved = [ "Mod+L" "Mod+C" "Mod+T" "Mod+F" "Mod+W" "Mod+O" "Mod+TAB" ];
+  macBind = line:
+    let
+      key = builtins.match "([[:space:]]*)([^[:space:]]+)(.*)" line;
+    in
+    if mac && key != null && builtins.elem (builtins.elemAt key 1) moved then
+      builtins.head key + lib.replaceStrings [ "Mod+" ] [ "Mod+Alt+" ] (builtins.elemAt key 1) + builtins.elemAt key 2
+    else line;
+  extra = lib.optionalString (mac && cfg.desktop.vicinae.enable) ''
+    Mod+Space repeat=false { spawn "vicinae" "toggle"; }
+  '' + lib.optionalString backlight ''
+    XF86KbdBrightnessUp allow-when-locked=true { spawn "macbook-backlight" "up"; }
+    XF86KbdBrightnessDown allow-when-locked=true { spawn "macbook-backlight" "down"; }
+  '' + lib.optionalString fn ''
+    F24 repeat=false { switch-layout "next"; }
+  '';
   # Without DMS, the media keys still work through the common session tools.
   mediaFallbacks = {
     XF86AudioRaiseVolume = ''spawn "wpctl" "set-volume" "-l" "1.0" "@DEFAULT_AUDIO_SINK@" "5%+";'';
@@ -16,15 +35,19 @@ let
     XF86MonBrightnessDown = ''spawn "brightnessctl" "set" "5%-";'';
   };
 
-  render = line:
+  render = original:
     let
+      line = macBind original;
       disabled = "/- " + line;
       spawns = program: lib.hasInfix ''{ spawn "${program}"'' line
         || lib.hasInfix ''{spawn "${program}"'' line;
       key = builtins.match "[[:space:]]*([^[:space:]]+).*" line;
       replacement = if key == null then null else mediaFallbacks.${builtins.head key} or null;
     in
-    if spawns "zen-beta" && !cfg.apps.zen.enable then
+    if line == "}" then extra + line
+    else if fn && cfg.macbook.macOSKeybindings.fnKey == "KEY_WAKEUP"
+      && lib.hasPrefix "XF86WakeUp " (lib.trim line) then disabled
+    else if spawns "zen-beta" && !cfg.apps.zen.enable then
       if cfg.apps.firefox.enable then
         lib.replaceStrings [ "Open Browser: Zen" "zen-beta" ] [ "Open Browser: Firefox" "firefox" ] line
       else disabled
@@ -37,3 +60,17 @@ let
     else line;
 in
 lib.concatMapStringsSep "\n" render (lib.splitString "\n" source)
++ lib.optionalString mac ''
+  recent-windows {
+      binds {
+          Alt+Tab { next-window; }
+          Alt+Shift+Tab { previous-window; }
+          Alt+grave { next-window filter="app-id"; }
+          Alt+Shift+grave { previous-window filter="app-id"; }
+          Mod+Tab { next-window; }
+          Mod+Shift+Tab { previous-window; }
+          Mod+grave { next-window filter="app-id"; }
+          Mod+Shift+grave { previous-window filter="app-id"; }
+      }
+  }
+''

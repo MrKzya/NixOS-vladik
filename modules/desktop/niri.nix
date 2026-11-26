@@ -37,7 +37,6 @@ lib.mkIf niri {
     xwayland-satellite
     qt6.qtwayland
   ] ++ lib.optionals dms [ pkgs.dux-gop ]
-    ++ lib.optionals (!dms) [ config.services.pipewire.wireplumber.package ]
     ++ lib.optionals vicinae [ pkgs.vicinae pkgs.nodejs ];
   fonts.packages = with pkgs; [ inter fira-code ];
   xdg.portal.extraPortals = [ pkgs.xdg-desktop-portal-gtk ];

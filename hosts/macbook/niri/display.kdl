@@ -1,2 +1,4 @@
-// Снимите имя выхода, доступные режимы и масштаб через niri msg outputs.
-// До этого Niri выбирает режим и масштаб автоматически.
+// Internal display on MacBookAir9,1. Use the preferred mode advertised by EDID.
+output "eDP-1" {
+    scale 1.6
+}

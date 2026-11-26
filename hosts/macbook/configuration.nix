@@ -1,8 +1,11 @@
-{ ... }:
+{ config, lib, ... }:
 
 {
   imports = [
     ../../modules/hardware/apple-t2.nix
+    ../../modules/hardware/macbook-keyboard.nix
+    ../../modules/hardware/macbook-backlight.nix
+    ../../modules/power/laptop.nix
     ./hardware-configuration.nix
     ./packages.nix
   ];
@@ -57,7 +60,7 @@
       development.enable = true;
       appimage.enable = false;
       nixLd.enable = false;
-      osProber.enable = true;
+      osProber.enable = false;
     };
 
     bluetooth.enable = true;
@@ -65,6 +68,9 @@
     grub.theme = "minegrub";
   };
 
+  # Enable automatic or lid suspend after testing sleep on the installed kernel.
+  mySystem.laptopPower.suspend.enable = false;
+  services.power-profiles-daemon.enable = lib.mkDefault config.services.displayManager.enable;
   hardware.enableRedistributableFirmware = true;
 
   # Enable only after confirming the exact MacBook and firmware source.
@@ -80,6 +86,7 @@
   services.t2fanrd.enable = false;
   mySystem.macbook = {
     localFirmware.enable = false;
+    macOSKeybindings.enable = true;
     intelMedia.enable = false;
   };
 }
