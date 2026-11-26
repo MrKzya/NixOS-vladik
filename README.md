@@ -16,13 +16,13 @@
 Требуются NixOS Minimal Live ISO, сеть, подготовленный GPT-раздел Btrfs и отдельный пустой ESP FAT32. Минимум свободного места — 15 ГиБ на корне и 256 МиБ на ESP. MacBook требует [T2 Live ISO](docs/MACBOOK-T2.md).
 
 ```bash
-git clone --branch installer https://github.com/MrKzya/NixOS-vladik.git
+git clone --single-branch --branch installer https://github.com/MrKzya/NixOS-vladik.git
 cd NixOS-vladik
 sudo bash install.sh --dry-run
 sudo bash install.sh
 ```
 
-`--dry-run` показывает план без монтирования, записи на целевые разделы и изменений DNS. В обычном режиме установщик монтирует разделы, формирует аппаратный модуль, проверяет зависимости, устанавливает GRUB и настраивает пользователя. Собственная разметка и форматирование остаются за пределами установщика. [Установка](docs/INSTALLATION.md)
+В обоих режимах требуется UEFI. `--dry-run` показывает план без монтирования, записи на целевые разделы и изменений DNS. В обычном режиме проверьте план и введите `INSTALL`. Установщик автоматически сохраняет параметры, показывает операции Nix и позволяет повторить этап. Для переноса плана между сеансами используйте `--export-plan FILE` и `--plan FILE`. Разметку и форматирование выполняет пользователь. [Установка](docs/INSTALLATION.md)
 
 ## Архитектура
 
@@ -31,6 +31,7 @@ sudo bash install.sh
 - [Конфигурация, пересборка и откат](docs/CONFIGURATION.md)
 - [Переключатели компонентов](docs/COMPONENTS.md)
 - [MacBook Air с Apple T2 и macOS](docs/MACBOOK-T2.md)
+- [Обновление работающей V2 на MacBook без Live ISO](docs/MACBOOK-UPGRADE.md)
 - [Готовое ядро и бинарный кеш](docs/BINARY-CACHE.md)
 - [VMware и воспроизводимая проверка](docs/VMWARE.md)
 - [Диагностика](docs/TROUBLESHOOTING.md)
