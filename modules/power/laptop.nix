@@ -20,8 +20,8 @@ in
   };
 
   config = lib.mkIf cfg.enable (lib.mkMerge [
-    (lib.mkIf (!cfg.suspend.enable) {
-      systemd.sleep.settings.Sleep.AllowSuspend = false;
+    (lib.mkIf (config.mySystem ? macbook || !cfg.suspend.enable) {
+      systemd.sleep.settings.Sleep.AllowSuspend = cfg.suspend.enable;
     })
     (lib.mkIf dms {
       # DMS owns idle actions, logind owns only the lid event.

@@ -19,44 +19,85 @@ printf '%s\n' '{"dankKbdLayout":{"enabled":true}}' > "$scratch/plugin"
 bash "$source_dir/scripts/dms-defaults.sh" plugin "$scratch/plugin"
 jq -e '.dankKbdLayout.enabled and .macbookBacklight.enabled' "$scratch/plugin" >/dev/null
 
+# The MacBook policy migrates stale V3.1 timeouts and preserves other settings.
+printf '%s\n' '{"batterySuspendTimeout":0,"acSuspendTimeout":200,"currentTheme":"custom"}' > "$scratch/mac-settings"
+touch "$scratch/mac-settings.nixos-vladik-power-v1"
+bash "$source_dir/scripts/dms-defaults.sh" power-managed "$scratch/mac-settings" "$scratch/defaults"
+jq -e '.batterySuspendTimeout == 900 and .currentTheme == "custom"' "$scratch/mac-settings" >/dev/null
+
 export XDG_RUNTIME_DIR=$scratch/run XDG_STATE_HOME=$scratch/state
-export LEVEL_FILE=$scratch/brightness
-mkdir -p "$scratch/leds"
-touch "$scratch/leds/apple::kbd_backlight"
-printf '40\n' > "$LEVEL_FILE"
-sed "s@/sys/class/leds@$scratch/leds@" "$source_dir/scripts/macbook-backlight.sh" > "$scratch/backend"
+export KBD_LEVEL=$scratch/keyboard DISPLAY_LEVEL=$scratch/display
+export KBD_MAX=14660 DISPLAY_MAX=17777
+mkdir -p "$scratch/sys/leds/:white:kbd_backlight" "$scratch/sys/backlight/intel_backlight"
+printf '5864\n' > "$KBD_LEVEL"
+printf '8889\n' > "$DISPLAY_LEVEL"
+sed "s@/sys/class@$scratch/sys@" "$source_dir/scripts/macbook-backlight.sh" > "$scratch/backend"
 flock() { :; }
 brightnessctl() {
+    local value maximum
+    case "$2" in
+        --device=:white:kbd_backlight) value=$KBD_LEVEL maximum=$KBD_MAX ;;
+        --device=intel_backlight) value=$DISPLAY_LEVEL maximum=$DISPLAY_MAX ;;
+        *) return 1 ;;
+    esac
     shift 2
     [[ $1 != --quiet ]] || shift
-    local value
     case "$1" in
-        get) cat "$LEVEL_FILE" ;;
-        set)
-            case "$2" in
-                10%-) value=$(<"$LEVEL_FILE"); value=$((value > 10 ? value - 10 : 0)) ;;
-                +10%) value=$(<"$LEVEL_FILE"); value=$((value + 10)) ;;
-                *) value=$2 ;;
-            esac
-            printf '%d\n' "$value" > "$LEVEL_FILE"
-            ;;
+        get) cat "$value" ;;
+        max) printf '%s\n' "$maximum" ;;
+        set) printf '%d\n' "$2" > "$value" ;;
     esac
 }
 # shellcheck disable=SC2034
 export -f brightnessctl flock
+
 bash "$scratch/backend" idle
-[[ $(<"$LEVEL_FILE") == 0 ]]
+[[ $(<"$KBD_LEVEL") == 0 && $(<"$DISPLAY_LEVEL") == 8889 ]]
 bash "$scratch/backend" resume
-[[ $(<"$LEVEL_FILE") == 40 ]]
-printf '10\n' > "$LEVEL_FILE"
-bash "$scratch/backend" down
-[[ $(<"$LEVEL_FILE") == 0 ]]
+[[ $(<"$KBD_LEVEL") == 5864 ]]
+
+# Suspend while keyboard idle. The kernel can reset both brightness levels.
 bash "$scratch/backend" idle
-bash "$scratch/backend" resume
-[[ $(<"$LEVEL_FILE") == 0 ]]
-printf '40\n' > "$LEVEL_FILE"
+bash "$scratch/backend" snapshot
+printf '0\n' > "$DISPLAY_LEVEL"
 bash "$scratch/backend" wake
-[[ $(<"$LEVEL_FILE") == 0 ]]
-rm -- "$scratch/leds/apple::kbd_backlight"
-bash "$scratch/backend" init
-printf '%s\n' 'DMS timer migration and keyboard backlight state passed.'
+[[ $(<"$KBD_LEVEL") == 5864 && $(<"$DISPLAY_LEVEL") == 8889 ]]
+bash "$scratch/backend" idle
+XDG_RUNTIME_DIR=$scratch/reboot bash "$scratch/backend" init
+[[ $(<"$KBD_LEVEL") == 5864 ]]
+printf '0\n' > "$KBD_LEVEL"
+XDG_RUNTIME_DIR=$scratch/next-reboot bash "$scratch/backend" init
+[[ $(<"$KBD_LEVEL") == 0 ]]
+
+# Keyboard manual zero vs automatic blanking, and the display 0 -> 1% step.
+printf '147\n' > "$KBD_LEVEL"
+bash "$scratch/backend" down
+bash "$scratch/backend" idle
+bash "$scratch/backend" resume
+[[ $(<"$KBD_LEVEL") == 0 ]]
+printf '178\n' > "$DISPLAY_LEVEL"
+bash "$scratch/backend" display-down
+[[ $(<"$DISPLAY_LEVEL") == 0 ]]
+bash "$scratch/backend" snapshot
+printf '500\n' > "$KBD_LEVEL"
+printf '500\n' > "$DISPLAY_LEVEL"
+bash "$scratch/backend" wake
+[[ $(<"$KBD_LEVEL") == 0 && $(<"$DISPLAY_LEVEL") == 0 ]]
+bash "$scratch/backend" display-up
+[[ $(<"$DISPLAY_LEVEL") == 178 ]]
+
+# Direct writes between adjacent percentages are compared in raw units.
+printf '1540\n' > "$KBD_LEVEL"
+bash "$scratch/backend" up
+[[ $(<"$KBD_LEVEL") == 2199 ]]
+printf '1540\n' > "$KBD_LEVEL"
+bash "$scratch/backend" down
+[[ $(<"$KBD_LEVEL") == 1466 ]]
+export KBD_MAX=3
+printf '0\n' > "$KBD_LEVEL"
+bash "$scratch/backend" up
+[[ $(<"$KBD_LEVEL") == 1 ]]
+bash "$scratch/backend" up
+[[ $(<"$KBD_LEVEL") == 2 ]]
+
+printf '%s\n' 'DMS power migration, display and keyboard brightness fixtures passed.'

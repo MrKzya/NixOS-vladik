@@ -1,45 +1,97 @@
 {
   lib,
-  stdenv,
   fetchurl,
-  dpkg,
-  autoPatchelfHook,
+  python3Packages,
   wrapGAppsHook3,
   gobject-introspection,
   gtk3,
   libayatana-appindicator,
-  tcl,
-  tk,
-  zlib,
+  xkeyboard_config,
+  wl-clipboard,
+  xclip,
+  xdg-utils,
+  xvfb-run,
+  copyDesktopItems,
+  makeDesktopItem,
 }:
 
-stdenv.mkDerivation (final: {
+python3Packages.buildPythonApplication (final: {
   pname = "tg-ws-proxy";
   version = "1.12.0";
+  pyproject = true;
 
   src = fetchurl {
-    url = "https://github.com/Flowseal/tg-ws-proxy/releases/download/v${final.version}/TgWsProxy_linux_amd64.deb";
-    hash = "sha256-LTQKFVxxDzw533WD7YiSLgcLudTEs2LU4/2Jtfmy9t0=";
+    name = "tg-ws-proxy-${final.version}.tar.gz";
+    url = "https://codeload.github.com/Flowseal/tg-ws-proxy/tar.gz/refs/tags/v${final.version}";
+    hash = "sha256-lOyCTJrvgq1Qm4gT8CjlQQ8YHPN/NQTVdaRhfiE/ocY=";
   };
+  patches = [ ./tg-ws-proxy-native-smoke.patch ];
 
-  nativeBuildInputs = [ dpkg autoPatchelfHook wrapGAppsHook3 gobject-introspection ];
-  buildInputs = [ stdenv.cc.cc.lib gtk3 libayatana-appindicator tcl tk zlib ];
+  nativeBuildInputs = with python3Packages; [
+    pythonRelaxDepsHook
+    wrapGAppsHook3
+    gobject-introspection
+    copyDesktopItems
+  ];
+  build-system = [ python3Packages.hatchling ];
 
-  # The PyInstaller payload loads the tray libraries dynamically.
-  runtimeDependencies = [ gtk3 libayatana-appindicator stdenv.cc.cc.lib zlib ];
-  dontStrip = true;
+  # Use one Python/GLib stack from the project's locked Nixpkgs.
+  pythonRelaxDeps = [ "cryptography" "pillow" "psutil" "pyperclip" ];
+  dependencies = with python3Packages; [
+    certifi
+    cryptography
+    customtkinter
+    h2 # httpx[http2]
+    httpx
+    pillow
+    psutil
+    pygobject3
+    pyperclip
+    pystray
+    tkinter
+  ];
+  buildInputs = [ gtk3 libayatana-appindicator ];
 
-  unpackPhase = ''
-    runHook preUnpack
-    dpkg-deb -x "$src" .
-    runHook postUnpack
+  postPatch = ''
+    substituteInPlace pyproject.toml \
+      --replace-fail '"linux.py" = "linux.py"' $'"linux.py" = "linux.py"\n"icon.ico" = "icon.ico"'
   '';
 
-  installPhase = ''
-    runHook preInstall
-    mkdir -p "$out"
-    cp -r usr/bin usr/share "$out/"
-    runHook postInstall
+  postInstall = ''
+    # Keep the former package entry point for desktop and command-line launches.
+    mv "$out/bin/tg-ws-proxy" "$out/bin/tg-ws-proxy-cli"
+    ln -s tg-ws-proxy-tray-linux "$out/bin/tg-ws-proxy"
+    mkdir -p "$out/share/pixmaps"
+    ${python3Packages.python.interpreter} -c 'from PIL import Image; import sys; Image.open("icon.ico").save(sys.argv[1])' \
+      "$out/share/pixmaps/tg-ws-proxy.png"
+  '';
+
+  dontWrapGApps = true;
+  preFixup = ''
+    makeWrapperArgs+=("''${gappsWrapperArgs[@]}"
+      --set-default PYSTRAY_BACKEND appindicator
+      --set-default XKB_CONFIG_ROOT "${xkeyboard_config}/share/X11/xkb"
+      --prefix PATH : "${lib.makeBinPath [ wl-clipboard xclip xdg-utils ]}")
+  '';
+
+  desktopItems = [
+    (makeDesktopItem {
+      name = "tg-ws-proxy";
+      desktopName = "TG WS Proxy";
+      exec = "tg-ws-proxy";
+      icon = "tg-ws-proxy";
+      categories = [ "Network" ];
+    })
+  ];
+
+  nativeInstallCheckInputs = [ xvfb-run ];
+  doInstallCheck = true;
+  installCheckPhase = ''
+    runHook preInstallCheck
+    export HOME="$(mktemp -d)"
+    "$out/bin/tg-ws-proxy-cli" --help
+    xvfb-run -a "$out/bin/tg-ws-proxy" --smoke-test
+    runHook postInstallCheck
   '';
 
   meta = {
@@ -47,6 +99,6 @@ stdenv.mkDerivation (final: {
     homepage = "https://github.com/Flowseal/tg-ws-proxy";
     license = lib.licenses.mit;
     mainProgram = "tg-ws-proxy";
-    platforms = [ "x86_64-linux" ];
+    platforms = lib.platforms.linux;
   };
 })

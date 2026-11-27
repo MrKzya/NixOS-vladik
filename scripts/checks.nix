@@ -55,6 +55,9 @@ let
     }; } ];
   }).config;
   macWithFn = macWithKey "KEY_FN";
+  macWithoutSuspend = (hosts.macbook.extendModules {
+    modules = [ { mySystem.laptopPower.suspend.enable = lib.mkForce false; } ];
+  }).config;
 
   cases = {
     niri = desktopCase { };
@@ -138,22 +141,31 @@ in
   }]);
 
   laptop-power = test "laptop-power-and-keyboard" (
-    ((power macbook).batterySuspendTimeout == 0)
+    ((power macbook).batterySuspendTimeout == 900)
+    && ((power macbook).acSuspendTimeout == 0)
     && ((power thinkpad).batterySuspendTimeout == 900)
     && ((power thinkpad).acSuspendTimeout == 0)
     && ((power thinkpad).batteryMonitorTimeout == 120)
     && ((power thinkpad).acMonitorTimeout == 600)
     && ((power thinkpad).batteryLockTimeout == 420)
     && ((power thinkpad).acLockTimeout == 900)
-    && !macbook.systemd.sleep.settings.Sleep.AllowSuspend
+    && macbook.systemd.sleep.settings.Sleep.AllowSuspend
+    && macbook.services.logind.settings.Login.HandleLidSwitchExternalPower == "suspend"
+    && macbook.services.logind.settings.Login.IdleAction == "ignore"
+    && !macWithoutSuspend.systemd.sleep.settings.Sleep.AllowSuspend
+    && ((power macWithoutSuspend).batterySuspendTimeout == 0)
+    && macWithoutSuspend.services.logind.settings.Login.HandleLidSwitch == "ignore"
     && !(macbook.systemd.user.services ? swayidle)
     && !(thinkpad.systemd.user.services ? swayidle)
-    && (macbook.security.wrappers.macbook-xremap.permissions == "u+rx,g-rwx,o-rwx")
+    && (macbook.security.wrappers.macbook-xremap.permissions == "u+rx,g+x,g-rw,o-rwx")
+    && macbook.systemd.user.services.macbook-shortcuts.unitConfig.StartLimitBurst == 3
     && lib.hasInfix "Mod+Space repeat=false" (keybinds macbook)
     && lib.hasInfix "Mod+Tab { next-window; }" (keybinds macbook)
     && lib.hasInfix "Mod+Alt+TAB" (keybinds macbook)
-    && !lib.hasInfix "F24 repeat=false" (keybinds macbook)
+    && lib.hasInfix "F24 repeat=false" (keybinds macbook)
     && lib.hasInfix "F24 repeat=false" (keybinds macWithFn)
+    && lib.hasInfix ''spawn "macbook-backlight" "display-up"'' (keybinds macbook)
+    && !lib.hasInfix ''spawn "macbook-backlight"'' (keybinds cases.niri)
     && lib.hasInfix "/-     XF86WakeUp" (keybinds (macWithKey "KEY_WAKEUP"))
     && !(macNoRemap.systemd.user.services ? macbook-shortcuts)
     && !lib.hasInfix "Mod+Space repeat=false" (keybinds macNoRemap)
@@ -166,6 +178,7 @@ in
   '';
 
   niri-macbook-fn = validateNiri "macbook-fn" macWithFn;
+  tg-ws-proxy = pkgs.callPackage ../pkgs/tg-ws-proxy.nix { };
 
   python-path = pkgs.runCommand "python-on-path" { nativeBuildInputs = [ pkgs.python3 ]; } ''
     python --version

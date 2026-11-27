@@ -16,6 +16,11 @@ case "$mode" in
                all(. == null or . == 0))
           then . + $defaults[0] else . end' <<< "$before") || exit 0
         ;;
+    power-managed)
+        before=$(jq -c . "$file") || exit 0
+        after=$(jq -c --slurpfile defaults "$3" '
+          if type == "object" then . + $defaults[0] else . end' <<< "$before") || exit 0
+        ;;
     plugin)
         before=$(jq -c . "$file") || exit 0
         after=$(jq -c 'if type == "object" and (has("macbookBacklight") | not)

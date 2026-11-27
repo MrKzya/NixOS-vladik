@@ -5,7 +5,7 @@ let
   mac = cfg.macbook.macOSKeybindings.enable or false;
   fn = mac && (cfg.macbook.macOSKeybindings.fnKey or null) != null;
   backlight = cfg.macbook.keyboardBacklight.enable or false;
-  moved = [ "Mod+L" "Mod+C" "Mod+T" "Mod+F" "Mod+W" "Mod+O" "Mod+TAB" ];
+  moved = [ "Mod+L" "Mod+T" "Mod+W" "Mod+O" "Mod+TAB" ];
   macBind = line:
     let
       key = builtins.match "([[:space:]]*)([^[:space:]]+)(.*)" line;
@@ -18,6 +18,8 @@ let
   '' + lib.optionalString backlight ''
     XF86KbdBrightnessUp allow-when-locked=true { spawn "macbook-backlight" "up"; }
     XF86KbdBrightnessDown allow-when-locked=true { spawn "macbook-backlight" "down"; }
+    XF86MonBrightnessUp allow-when-locked=true { spawn "macbook-backlight" "display-up"; }
+    XF86MonBrightnessDown allow-when-locked=true { spawn "macbook-backlight" "display-down"; }
   '' + lib.optionalString fn ''
     F24 repeat=false { switch-layout "next"; }
   '';
@@ -45,6 +47,7 @@ let
       replacement = if key == null then null else mediaFallbacks.${builtins.head key} or null;
     in
     if line == "}" then extra + line
+    else if backlight && key != null && builtins.elem (builtins.head key) [ "XF86MonBrightnessUp" "XF86MonBrightnessDown" ] then disabled
     else if fn && cfg.macbook.macOSKeybindings.fnKey == "KEY_WAKEUP"
       && lib.hasPrefix "XF86WakeUp " (lib.trim line) then disabled
     else if spawns "zen-beta" && !cfg.apps.zen.enable then

@@ -1,5 +1,4 @@
 import QtQuick
-import Quickshell
 import Quickshell.Io
 import Quickshell.Wayland
 import qs.Services
@@ -8,11 +7,11 @@ Item {
     id: root
     property string pluginId
     property var pluginService
-    property string pending
+    property var pending: []
 
     function request(action) {
         if (backlight.running) {
-            pending = action;
+            pending.push(action);
             return;
         }
         backlight.command = ["@backlight@", action];
@@ -22,11 +21,8 @@ Item {
     Process {
         id: backlight
         onExited: {
-            if (root.pending !== "") {
-                const action = root.pending;
-                root.pending = "";
-                Qt.callLater(root.request, action);
-            }
+            if (root.pending.length > 0)
+                Qt.callLater(root.request, root.pending.shift());
         }
     }
 
@@ -34,18 +30,30 @@ Item {
         id: idle
         timeout: 60
         respectInhibitors: true
-        enabled: !IdleService.externalInhibitActive && !SessionService.idleInhibited
-        onIsIdleChanged: root.request(isIdle ? "idle" : "resume")
+        enabled: @idleEnabled@ && !IdleService.externalInhibitActive && !SessionService.idleInhibited
+        onIsIdleChanged: {
+            if (!SessionService.preparingForSleep && !wakeDelay.running)
+                root.request(isIdle ? "idle" : "resume");
+        }
+    }
+
+    Timer {
+        id: wakeDelay
+        interval: 500
+        onTriggered: root.request("wake")
     }
 
     Connections {
         target: SessionService
         function onPreparingForSleepChanged() {
-            if (!SessionService.preparingForSleep)
-                root.request(idle.isIdle ? "idle" : "wake");
+            if (SessionService.preparingForSleep) {
+                wakeDelay.stop();
+                root.request("snapshot");
+            } else {
+                wakeDelay.restart();
+            }
         }
     }
 
     Component.onCompleted: request("init")
-    Component.onDestruction: Quickshell.execDetached(["@backlight@", "resume"])
 }

@@ -21,10 +21,10 @@ let
     text = builtins.readFile ../scripts/apply-dms-wallpaper-default.sh;
   };
   laptopPower = cfg.laptopPower.enable or false;
-  keyboardIdle = (cfg.macbook.keyboardBacklight.enable or false) &&
-    (cfg.macbook.keyboardBacklight.idle.enable or false);
+  macBacklight = cfg.macbook.keyboardBacklight.enable or false;
   powerDefaults = lib.optionalAttrs laptopPower (import ../modules/power/dms-settings.nix cfg.laptopPower);
   powerFile = pkgs.writeText "laptop-dms-defaults.json" (builtins.toJSON powerDefaults);
+  powerMode = if cfg ? macbook then "power-managed" else "power";
   cursorSize = nixosConfig.mySystem.cursor.size;
   dmsSettings = builtins.fromJSON (builtins.readFile (dms + "/settings.json"));
   dmsSeed = pkgs.writeText "dms-settings.json" (builtins.toJSON (dmsSettings // powerDefaults // {
@@ -80,14 +80,14 @@ in
     lib.hm.dag.entryAfter [ "linkGeneration" ] (seed ../configs/vicinae/settings.json "vicinae/settings.json")
   );
 
-  home.activation.dmsLaptopDefaults = lib.mkIf (enableDms && (laptopPower || keyboardIdle))
+  home.activation.dmsLaptopDefaults = lib.mkIf (enableDms && (laptopPower || macBacklight))
     (lib.hm.dag.entryAfter [ "seedDms" ] (
       let
         command = "${pkgs.bash}/bin/bash ${../scripts/dms-defaults.sh}";
         configDirs = [ "dms" "DankMaterialShell" ];
       in lib.concatMapStrings (dir: lib.optionalString laptopPower ''
-        PATH=${lib.makeBinPath [ pkgs.jq pkgs.coreutils ]} run ${command} power ${lib.escapeShellArg "${configHome}/${dir}/settings.json"} ${powerFile}
-      '' + lib.optionalString keyboardIdle ''
+        PATH=${lib.makeBinPath [ pkgs.jq pkgs.coreutils ]} run ${command} ${powerMode} ${lib.escapeShellArg "${configHome}/${dir}/settings.json"} ${powerFile}
+      '' + lib.optionalString macBacklight ''
         PATH=${lib.makeBinPath [ pkgs.jq pkgs.coreutils ]} run ${command} plugin ${lib.escapeShellArg "${configHome}/${dir}/plugin_settings.json"}
       '') configDirs
     ));

@@ -1,0 +1,79 @@
+--- a/src/input/mod.rs
++++ b/src/input/mod.rs
+@@ -2822 +2822 @@
+-                        .view_offset_gesture_begin(&output, Some(ws_idx), false);
++                        .view_offset_gesture_begin(&output, Some(ws_idx), false, false);
+@@ -3324,0 +3325 @@
++                                    false,
+@@ -3831 +3832,6 @@
+-                                .view_offset_gesture_begin(&output, Some(ws_idx), true);
++                                .view_offset_gesture_begin(
++                                    &output,
++                                    Some(ws_idx),
++                                    true,
++                                    !is_overview_open,
++                                );
+--- a/src/layout/mod.rs
++++ b/src/layout/mod.rs
+@@ -3652,0 +3653 @@
++        adjacent_swipe: bool,
+@@ -3669 +3670 @@
+-                ws.view_offset_gesture_begin(is_touchpad);
++                ws.view_offset_gesture_begin(is_touchpad, adjacent_swipe);
+--- a/src/layout/workspace.rs
++++ b/src/layout/workspace.rs
+@@ -1871,2 +1871,2 @@
+-    pub fn view_offset_gesture_begin(&mut self, is_touchpad: bool) {
+-        self.scrolling.view_offset_gesture_begin(is_touchpad);
++    pub fn view_offset_gesture_begin(&mut self, is_touchpad: bool, adjacent_swipe: bool) {
++        self.scrolling.view_offset_gesture_begin(is_touchpad, adjacent_swipe);
+--- a/src/layout/tests.rs
++++ b/src/layout/tests.rs
+@@ -1522 +1522 @@
+-                layout.view_offset_gesture_begin(&output, workspace_idx, normalize);
++                layout.view_offset_gesture_begin(&output, workspace_idx, normalize, false);
+--- a/src/layout/scrolling.rs
++++ b/src/layout/scrolling.rs
+@@ -31,0 +32 @@
++const ADJACENT_SWIPE_WORKING_AREA_MOVEMENT: f64 = 500.;
+@@ -134,0 +136 @@
++    adjacent_swipe: bool,
+@@ -3012 +3014 @@
+-    pub fn view_offset_gesture_begin(&mut self, is_touchpad: bool) {
++    pub fn view_offset_gesture_begin(&mut self, is_touchpad: bool, adjacent_swipe: bool) {
+@@ -3027,0 +3030 @@
++            adjacent_swipe,
+@@ -3050,0 +3054 @@
++            adjacent_swipe: false,
+@@ -3075 +3079,3 @@
+-        let norm_factor = if gesture.is_touchpad {
++        let norm_factor = if gesture.adjacent_swipe {
++            self.working_area.size.w / ADJACENT_SWIPE_WORKING_AREA_MOVEMENT
++        } else if gesture.is_touchpad {
+@@ -3179 +3185,3 @@
+-        let norm_factor = if gesture.is_touchpad {
++        let norm_factor = if gesture.adjacent_swipe {
++            self.working_area.size.w / ADJACENT_SWIPE_WORKING_AREA_MOVEMENT
++        } else if gesture.is_touchpad {
+@@ -3194 +3202,5 @@
+-        let end_pos = gesture.tracker.projected_end_pos() * norm_factor;
++        let mut end_pos = gesture.tracker.projected_end_pos() * norm_factor;
++        if gesture.adjacent_swipe && pos.abs() > self.working_area.size.w * 0.10 {
++            // Bias a deliberate short swipe towards the neighbor, after a small dead zone.
++            end_pos += pos.signum() * self.working_area.size.w * 0.20;
++        }
+@@ -3384,0 +3397,4 @@
++        let origin = Snap {
++            col_idx: self.active_column_idx,
++            view_pos: active_col_x + gesture.delta_from_tracker,
++        };
+@@ -3386,0 +3403,3 @@
++            .filter(|snap| {
++                !gesture.adjacent_swipe || snap.col_idx.abs_diff(self.active_column_idx) <= 1
++            })
+@@ -3388 +3407 @@
+-            .unwrap();
++            .unwrap_or(&origin);
+@@ -3392 +3411 @@
+-        if !self.is_centering_focused_column() {
++        if !gesture.adjacent_swipe && !self.is_centering_focused_column() {

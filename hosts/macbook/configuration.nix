@@ -5,6 +5,7 @@
     ../../modules/hardware/apple-t2.nix
     ../../modules/hardware/macbook-keyboard.nix
     ../../modules/hardware/macbook-backlight.nix
+    ../../modules/hardware/macbook-desktop.nix
     ../../modules/power/laptop.nix
     ./hardware-configuration.nix
     ./packages.nix
@@ -12,6 +13,7 @@
 
   networking.hostName = "macbook";
   nixpkgs.hostPlatform = "x86_64-linux";
+
 
   mySystem = {
     desktop = {
@@ -69,8 +71,8 @@
     grub.efiVideoMode = "1024x768,1280x800,auto";
   };
 
-  # Enable automatic or lid suspend after testing sleep on the installed kernel.
-  mySystem.laptopPower.suspend.enable = false;
+  # The owner verified manual suspend and lid wake with the pinned apple-bce kernel.
+  mySystem.laptopPower.suspend.enable = lib.mkDefault true;
   services.power-profiles-daemon.enable = lib.mkDefault config.services.displayManager.enable;
   hardware.enableRedistributableFirmware = true;
 
